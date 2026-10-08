@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manga Translator</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme = localStorage.getItem("mt-theme") || "light";
+    } catch (e) {
+      document.documentElement.dataset.theme = "light";
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700&family=Be+Vietnam+Pro:wght@400;600;700&family=Comic+Neue:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&family=Mali:wght@400;700&family=Noto+Sans:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&family=Nunito:wght@400;700&family=Patrick+Hand&family=Quicksand:wght@400;700&display=swap"
+    rel="stylesheet"
+    crossorigin="anonymous"
+  />
+  <link rel="stylesheet" href="./src/style.css" />
+
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/jszip@3.10.2/dist/jszip.min.js"></script>
+</head>
+<body>
+  <header class="toolbar">
+    <div class="brand">Manga&nbsp;Translator</div>
+    <input id="projectName" class="project-name" type="text" placeholder="Đặt tên project…" spellcheck="false" />
+
+    <div class="group">
+      <button id="btnAddImages" class="primary" title="Thêm một hoặc nhiều ảnh trang truyện">+ Ảnh</button>
+      <button id="btnAddUrl" title="Dán URL ảnh hoặc URL trang chương">+ URL</button>
+      <button id="btnDetect" title="Phát hiện bong bóng và ô chữ bằng model">Nhận diện</button>
+    </div>
+
+    <div class="group">
+      <select id="ocrLang" class="compact" title="Ngôn ngữ gốc của truyện (cho OCR)">
+        <option value="jpn">日本語 · Nhật</option>
+        <option value="chi_sim">中文 (giản thể)</option>
+        <option value="chi_tra">中文 (phồn thể)</option>
+        <option value="kor">한국어 · Hàn</option>
+        <option value="eng">English</option>
+        <option value="vie">Tiếng Việt</option>
+      </select>
+      <button id="btnOcr" title="Chạy OCR để điền nguyên văn">OCR</button>
+      <select id="transDir" class="compact" title="Chiều dịch gợi ý">
+        <option value="en-vi">Anh → Việt</option>
+        <option value="vi-en">Việt → Anh</option>
+      </select>
+      <button id="btnTranslate" title="Gợi ý bản dịch cho các vùng đã có nguyên văn (OCR)">Dịch</button>
+    </div>
+
+    <div class="group">
+      <button id="btnAddRegion" title="Vẽ thêm một vùng dịch thủ công">+ Vùng</button>
+      <button id="btnInpaint" title="Dùng AI (LaMa) xoá chữ gốc và tái tạo nền, giữ nét vẽ">Xoá chữ AI</button>
+      <button id="btnInpaintUndo" title="Bỏ nền đã xoá chữ, quay lại ảnh gốc">↺</button>
+    </div>
+
+    <div class="group right">
+      <button id="btnExportZip" class="primary" title="Xuất toàn bộ trang thành ZIP">ZIP</button>
+      <button id="btnMenu" class="menu-btn" title="Thêm tuỳ chọn">⋯</button>
+    </div>
+
+    <input id="fileInput" type="file" accept="image/*" multiple hidden />
+    <input id="projectInput" type="file" accept=".mtproj,.zip,application/zip" hidden />
+  </header>
+
+  <div class="menu hidden" id="topMenu">
+    <button id="btnNewProject">Project mới</button>
+    <button id="btnSave">Lưu</button>
+    <button id="btnOpen">Mở project…</button>
+    <button id="btnExportProject">Xuất project</button>
+    <button id="btnExportPng">Xuất PNG (trang này)</button>
+    <div class="menu-sep"></div>
+    <label class="menu-inline" title="Ngưỡng tin cậy của model nhận diện">
+      <span>Ngưỡng nhận diện: <b id="thresholdVal">0.40</b></span>
+      <input id="threshold" type="range" min="0.1" max="0.9" step="0.05" value="0.4" />
+    </label>
+    <label class="menu-row" title="Cắt từng vùng rồi OCR riêng — chính xác hơn cho manga">
+      <input type="checkbox" id="ocrModeRegion" checked /> OCR theo từng vùng
+    </label>
+    <div class="menu-sep"></div>
+    <label class="menu-inline">
+      <span>Nguồn dịch cho nút “Dịch”</span>
+      <select id="transProvider">
+        <option value="offline">Offline — miễn phí (Anh↔Việt)</option>
+        <option value="gemini">Gemini — đọc chữ + dịch ngữ cảnh</option>
+      </select>
+    </label>
+    <label class="menu-inline" id="geminiKeyRow">
+      <span>Gemini API key (lưu trong máy)</span>
+      <input type="password" id="geminiKey" placeholder="AIza…" spellcheck="false" />
+    </label>
+    <label class="menu-inline" id="geminiModelRow">
+      <span>Model Gemini</span>
+      <select id="geminiModel">
+        <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+        <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+      </select>
+    </label>
+    <div class="menu-inline" id="geminiUsage"></div>
+    <div class="menu-inline menu-grid" id="geminiLimits">
+      <label title="Requests/phút">RPM<input type="number" id="limRpm" min="1" step="1" /></label>
+      <label title="Tokens/phút">TPM<input type="number" id="limTpm" min="1" step="1000" /></label>
+      <label title="Requests/ngày">RPD<input type="number" id="limRpd" min="1" step="1" /></label>
+    </div>
+    <div class="menu-inline" id="geminiCountdown" style="display:none;color:var(--danger)"></div>
+    <button id="btnTheme">Nền tối</button>
+  </div>
+
+  <main class="layout">
+    <aside class="pages" id="pages">
+      <div class="aside-title">Trang</div>
+      <div id="pagesList" class="pages-list"></div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div class="panes" id="panes">
+        <div class="pane" id="paneOrig">
+          <div class="stage-scroll" id="stageScroll">
+            <div class="stage" id="stage">
+              <img id="pageImg" alt="" draggable="false" />
+              <div class="overlay" id="overlay"></div>
+            </div>
+          </div>
+          <span class="pane-label">Bản gốc</span>
+        </div>
+        <div class="pane hidden" id="paneResult">
+          <div class="stage-scroll" id="resultScroll">
+            <div class="stage" id="resultStage">
+              <canvas id="resultCanvas"></canvas>
+            </div>
+          </div>
+          <span class="pane-label">Bản dịch</span>
+        </div>
+      </div>
+      <div class="empty-hint" id="emptyHint">
+        <h2>Kéo &amp; thả ảnh manga vào đây</h2>
+        <p>hoặc bấm <b>+ Ảnh</b>. Mọi xử lý chạy ngay trong trình duyệt, ảnh không rời khỏi máy bạn.</p>
+      </div>
+      <div class="zoombar">
+        <button id="zoomOut" title="Thu nhỏ">−</button>
+        <span id="zoomLabel">100%</span>
+        <button id="zoomIn" title="Phóng to">+</button>
+        <button id="zoomFit" title="Vừa khung">Vừa</button>
+        <label class="inline" title="Hiện/ẩn các vùng đã nhận diện">
+          <input type="checkbox" id="showBoxes" checked /> Vùng
+        </label>
+        <label class="inline" title="Mở khung thứ hai để đối chiếu bản gốc và bản dịch">
+          <input type="checkbox" id="compareToggle" /> Đối chiếu
+        </label>
+      </div>
+    </section>
+
+    <aside class="inspector" id="inspector">
+      <div class="aside-title">Vùng dịch</div>
+      <div id="regionList" class="region-list"></div>
+      <details class="global-style" id="globalStyle">
+        <summary>Kiểu chữ chung (áp dụng toàn bộ)</summary>
+        <div id="globalFields" class="fields"></div>
+      </details>
+      <div class="fields" id="fields">
+        <p class="muted">Chọn một vùng trên ảnh để nhập bản dịch.</p>
+      </div>
+    </aside>
+  </main>
+
+  <div class="statusbar">
+    <span id="status">Sẵn sàng</span>
+    <div class="legend" title="Màu số trang trong cột Trang">
+      <span class="legend-item"><i class="dot empty"></i>Chưa nhận diện</span>
+      <span class="legend-item"><i class="dot none"></i>Chưa dịch</span>
+      <span class="legend-item"><i class="dot partial"></i>Dở dang</span>
+      <span class="legend-item"><i class="dot done"></i>Đã dịch</span>
+    </div>
+    <span id="pageInfo"></span>
+  </div>
+
+  <div class="dropzone" id="dropzone">
+    <div class="dropzone-inner">Thả ảnh để thêm trang</div>
+  </div>
+
+  <div class="modal hidden" id="urlModal">
+    <div class="modal-box">
+      <div class="modal-title">Thêm ảnh bằng URL</div>
+      <p class="muted">
+        Dán <b>URL ảnh trực tiếp</b> hoặc <b>URL trang chương</b> (mỗi dòng một URL). Nếu là trang web,
+        tool sẽ đọc nội dung qua Jina Reader rồi tự trích các ảnh truyện theo đúng thứ tự.
+      </p>
+      <textarea id="urlInput" spellcheck="false" placeholder="https://example.com/chapter/001.jpg&#10;https://example.com/manga/chapter-36/&#10;https://example.com/chapter/010.jpg"></textarea>
+      <label class="inline modal-inline">
+        <input type="checkbox" id="urlProxy" checked />
+        Dùng proxy ảnh (images.weserv.nl) khi host chặn CORS
+      </label>
+      <label class="inline modal-inline">
+        <input type="checkbox" id="urlJina" checked />
+        Đọc URL trang chương bằng Jina Reader (tự trích ảnh)
+      </label>
+      <label class="modal-inline modal-key">
+        <span>Jina API key (tuỳ chọn, để tăng giới hạn)</span>
+        <input type="text" id="urlJinaKey" spellcheck="false" placeholder="jina_..." />
+      </label>
+      <div id="urlStatus" class="modal-status"></div>
+      <div class="modal-actions">
+        <button id="urlCancel">Huỷ</button>
+        <button id="urlExtract" title="Chỉ trích danh sách URL ảnh, không tải về">Lấy URL ảnh</button>
+        <button id="urlFetch" class="primary">Tải ảnh</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
