@@ -453,12 +453,106 @@ function setBusy(v) {
 }
 
 let projectDirty = false;
+
+/* ---------------- Undo / Redo ---------------- */
+let history = [];
+let hIndex = -1;
+const HISTORY_LIMIT = 60;
+
+function cloneModel(s) {
+  return {
+    name: s.name,
+    activeId: s.activeId,
+    settings: structuredClone(s.settings),
+    pages: s.pages.map((p) => ({
+      id: p.id,
+      name: p.name,
+      width: p.width,
+      height: p.height,
+      mime: p.mime,
+      imageBlob: p.imageBlob,
+      cleanBlob: p.cleanBlob || null,
+      sourceUrl: p.sourceUrl || null,
+      thumb: null,
+      regions: structuredClone(p.regions),
+    })),
+  };
+}
+function resetHistory() {
+  commitSoon.cancel();
+  history = [cloneModel(state)];
+  hIndex = 0;
+  updateUndoUI();
+}
+function commitHistory() {
+  if (hIndex < 0) return resetHistory();
+  history = history.slice(0, hIndex + 1);
+  history.push(cloneModel(state));
+  if (history.length > HISTORY_LIMIT) history.shift();
+  hIndex = history.length - 1;
+  updateUndoUI();
+}
+const commitSoon = debounce(commitHistory, 500);
+
+function renderAll() {
+  renderGlobalFields();
+  renderOverlay();
+  renderRegionsList();
+  renderFields();
+  renderPages();
+  updatePageInfo();
+  if (state.display.compare) renderResult();
+}
+function applySnapshot(snap) {
+  const ids = new Set(snap.pages.map((p) => p.id));
+  for (const p of state.pages) {
+    if (!ids.has(p.id)) {
+      dropPageImage(p.id);
+      dropCleanImage(p.id);
+    }
+  }
+  const oldThumbs = new Map(state.pages.map((p) => [p.id, p.thumb]));
+  state.name = snap.name;
+  state.activeId = snap.activeId;
+  state.settings = structuredClone(snap.settings);
+  state.pages = snap.pages.map((p) => ({ ...p, thumb: oldThumbs.get(p.id) || null, regions: structuredClone(p.regions) }));
+  els.projectName.value = state.name || "";
+  if (!state.pages.some((p) => p.id === selectedId)) selectedId = null;
+  initTransUI();
+  initGeminiLimitsUI();
+  renderAll();
+  for (const p of state.pages) queueThumb(p, els.pagesList.querySelector(`.page-thumb[data-id="${p.id}"] img`));
+  persist(state).catch(() => {});
+}
+function undo() {
+  if (hIndex > 0) {
+    hIndex--;
+    applySnapshot(history[hIndex]);
+    setStatus("Hoàn tác.", false, true);
+  }
+}
+function redo() {
+  if (hIndex >= 0 && hIndex < history.length - 1) {
+    hIndex++;
+    applySnapshot(history[hIndex]);
+    setStatus("Làm lại.", false, true);
+  }
+}
+function updateUndoUI() {
+  const u = $("btnUndo");
+  const r = $("btnRedo");
+  if (u) u.disabled = hIndex <= 0;
+  if (r) r.disabled = hIndex >= history.length - 1;
+}
+
 async function schedulePersist() {
   projectDirty = true;
+  commitSoon();
   await persist(state).catch((e) => console.warn("persist failed", e));
 }
 
 const persistSoon = debounce(() => schedulePersist(), 600);
+const persistOnly = debounce(() => persist(state).catch(() => {}), 800);
 
 /* ---------------- Page rendering ---------------- */
 
@@ -521,7 +615,7 @@ function pumpThumbs() {
       .then(({ img }) => {
         if (!page.thumb) page.thumb = makeThumb(img);
         if (imgEl.isConnected) imgEl.src = page.thumb;
-        persistSoon();
+        persistOnly();
       })
       .catch(() => {})
       .finally(() => {
@@ -1170,6 +1264,20 @@ function toggleKeep() {
 document.addEventListener("keydown", (e) => {
   const tag = document.activeElement?.tagName;
   const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  const mod = e.metaKey || e.ctrlKey;
+
+  // Hoàn tác / làm lại (để native undo khi đang gõ trong ô nhập)
+  if (mod && !typing && (e.key === "z" || e.key === "Z")) {
+    e.preventDefault();
+    if (e.shiftKey) redo();
+    else undo();
+    return;
+  }
+  if (mod && !typing && (e.key === "y" || e.key === "Y")) {
+    e.preventDefault();
+    redo();
+    return;
+  }
 
   // Giữ nguyên: K khi không gõ chữ, hoặc Alt+K khi đang gõ.
   const isK = e.code === "KeyK" || (e.key || "").toLowerCase() === "k";
@@ -2349,6 +2457,7 @@ function newProject() {
   renderActive();
   schedulePersist();
   projectDirty = false;
+  resetHistory();
   setStatus("Đã tạo project mới. Thêm ảnh để bắt đầu.", false, true);
 }
 
@@ -2387,6 +2496,7 @@ async function loadProjectFile(file) {
     renderPages();
     await persist(state);
     projectDirty = false;
+    resetHistory();
     setStatus(`Đã mở ${state.pages.length} trang.`, false, true);
   } catch (e) {
     console.error(e);
@@ -2420,7 +2530,9 @@ function wire() {
   $("btnInpaintUndo").addEventListener("click", undoInpaint);
   $("btnTranslate").addEventListener("click", runTranslate);
   $("btnSave").addEventListener("click", saveProject);
-  $("btnNewProject").addEventListener("click", newProject);  $("btnOpen").addEventListener("click", () => els.projectInput.click());
+  $("btnNewProject").addEventListener("click", newProject);
+  $("btnUndo").addEventListener("click", undo);
+  $("btnRedo").addEventListener("click", redo);  $("btnOpen").addEventListener("click", () => els.projectInput.click());
   $("btnExportProject").addEventListener("click", exportProjectFile);
   $("btnExportPng").addEventListener("click", exportPng);
   $("btnExportZip").addEventListener("click", exportZip);
@@ -2661,6 +2773,7 @@ async function boot() {
       renderActive();
       renderPages();
     }
+    resetHistory();
   } finally {
     bootDone();
   }

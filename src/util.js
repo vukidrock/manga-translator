@@ -105,10 +105,16 @@ export function nextFrame() {
 
 export function debounce(fn, ms) {
   let t;
-  return (...args) => {
+  const wrapped = (...args) => {
     clearTimeout(t);
     t = setTimeout(() => fn(...args), ms);
   };
+  wrapped.cancel = () => clearTimeout(t);
+  wrapped.flush = () => {
+    clearTimeout(t);
+    fn();
+  };
+  return wrapped;
 }
 
 export function escapeHtml(str = "") {
