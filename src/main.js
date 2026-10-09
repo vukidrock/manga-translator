@@ -104,6 +104,14 @@ const els = {
   urlCancel: $("urlCancel"),
 };
 
+function refreshIcons() {
+  try {
+    window.lucide?.createIcons();
+  } catch {
+    /* ignore */
+  }
+}
+
 function applyTheme(mode) {
   const next = mode === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
@@ -113,8 +121,10 @@ function applyTheme(mode) {
     /* ignore */
   }
   if (els.btnTheme) {
-    els.btnTheme.textContent = next === "dark" ? "Nền sáng" : "Nền tối";
+    els.btnTheme.innerHTML =
+      next === "dark" ? '<i data-lucide="sun"></i>Nền sáng' : '<i data-lucide="moon"></i>Nền tối';
     els.btnTheme.title = next === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối";
+    refreshIcons();
   }
 }
 
@@ -2679,8 +2689,8 @@ function wire() {
   const mod = isMac ? "⌘" : "Ctrl+";
   const bu = $("btnUndo");
   const br = $("btnRedo");
-  if (bu) bu.innerHTML = `Hoàn tác <span class="kbd">${mod}Z</span>`;
-  if (br) br.innerHTML = `Làm lại <span class="kbd">${mod}${isMac ? "⇧" : "Shift+"}Z</span>`;
+  if (bu) bu.innerHTML = `<i data-lucide="undo-2"></i>Hoàn tác <span class="kbd">${mod}Z</span>`;
+  if (br) br.innerHTML = `<i data-lucide="redo-2"></i>Làm lại <span class="kbd">${mod}${isMac ? "⇧" : "Shift+"}Z</span>`;
   $("btnAddImages").addEventListener("click", () => els.fileInput.click());
   $("btnAddUrl").addEventListener("click", openUrlModal);
   els.urlCancel.addEventListener("click", closeUrlModal);
@@ -2962,6 +2972,7 @@ async function boot() {
       renderPages();
     }
     resetHistory();
+    refreshIcons();
   } finally {
     bootDone();
   }

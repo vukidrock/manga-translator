@@ -117,10 +117,14 @@ select.compact { max-width: 118px; padding: 6px 6px; }
 
 .menu {
   position: fixed; z-index: 200; width: 280px; max-width: 92vw;
+  max-height: min(82vh, calc(100vh - 70px)); overflow-y: auto; overscroll-behavior: contain;
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
   box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; gap: 1px;
 }
 .menu select, .menu input { width: 100%; max-width: 100%; min-width: 0; }
+.menu button svg, .toolbar button svg { width: 15px; height: 15px; vertical-align: -3px; margin-right: 5px; flex: 0 0 auto; }
+.menu-btn svg { margin-right: 0; }
+.menu-group-label svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 4px; }
 .menu.hidden { display: none; }
 .menu button {
   text-align: left; background: transparent; border: none; border-radius: 7px;
