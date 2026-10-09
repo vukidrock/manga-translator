@@ -69,15 +69,16 @@
   </header>
 
   <div class="menu hidden" id="topMenu">
+    <div class="menu-group-label">Trang &amp; dự án</div>
     <button id="btnUndo">Hoàn tác</button>
     <button id="btnRedo">Làm lại</button>
-    <div class="menu-sep"></div>
     <button id="btnNewProject">Project mới</button>
     <button id="btnSave">Lưu</button>
     <button id="btnOpen">Mở project…</button>
     <button id="btnExportProject">Xuất project</button>
     <button id="btnExportPng">Xuất PNG (trang này)</button>
     <div class="menu-sep"></div>
+    <div class="menu-group-label">Nhận diện</div>
     <label class="menu-inline" title="Ngưỡng tin cậy của model nhận diện">
       <span>Ngưỡng nhận diện: <b id="thresholdVal">0.40</b></span>
       <input id="threshold" type="range" min="0.1" max="0.9" step="0.05" value="0.4" />
@@ -86,6 +87,7 @@
       <input type="checkbox" id="ocrModeRegion" checked /> OCR theo từng vùng
     </label>
     <div class="menu-sep"></div>
+    <div class="menu-group-label">Dịch</div>
     <label class="menu-inline">
       <span>Nguồn dịch cho nút “Dịch”</span>
       <select id="transProvider">
@@ -112,7 +114,13 @@
       <label title="Requests/ngày">RPD<input type="number" id="limRpd" min="1" step="1" /></label>
     </div>
     <div class="menu-inline" id="geminiCountdown" style="display:none;color:var(--danger)"></div>
+    <div class="menu-sep"></div>
+    <div class="menu-group-label">Giao diện</div>
     <button id="btnTheme">Nền tối</button>
+    <details class="menu-details">
+      <summary>Phím tắt</summary>
+      <div class="menu-hint"><b>⌘/Ctrl + Z</b> — Hoàn tác<br /><b>⌘/Ctrl + ⇧ + Z</b> — Làm lại<br /><b>K</b> (Alt+K khi đang gõ) — Giữ nguyên vùng đang chọn<br /><b>Delete / Backspace</b> — Xoá vùng đang chọn<br /><b>Double-click vùng</b> — Zoom sát vùng<br /><b>Giữ Shift khi xoay</b> — Bắt góc 15°</div>
+    </details>
     <div class="menu-version" id="menuVersion"></div>
   </div>
 
@@ -153,7 +161,15 @@
       </div>
       <div class="empty-hint" id="emptyHint">
         <h2>Kéo &amp; thả ảnh manga vào đây</h2>
-        <p>hoặc bấm <b>+ Ảnh</b>. Mọi xử lý chạy ngay trong trình duyệt, ảnh không rời khỏi máy bạn.</p>
+        <p>hoặc bấm <b>+ Ảnh</b> / <b>+ URL</b>. Mọi xử lý chạy ngay trong trình duyệt, ảnh không rời khỏi máy bạn.</p>
+        <ol class="steps">
+          <li><b>+ Ảnh</b> hoặc <b>+ URL</b> — thêm trang</li>
+          <li><b>Nhận diện</b> — tìm bong bóng &amp; ô chữ</li>
+          <li><b>OCR</b> (dịch Offline) — hoặc nhập Gemini API key ở menu <b>⋯</b></li>
+          <li><b>Dịch</b> — điền bản dịch, rồi sửa trong bảng bên phải</li>
+          <li><b>Xoá chữ AI</b> / <b>Cọ tẩy</b> — dọn chữ gốc</li>
+          <li><b>ZIP</b> — xuất ảnh đã dịch</li>
+        </ol>
       </div>
       <div class="zoombar">
         <button id="zoomOut" title="Thu nhỏ">−</button>
