@@ -91,10 +91,7 @@ export function regionCenter(r) {
 }
 
 export function regionAngleDeg(r) {
-  if (r.shape === "quad" && r.quad && r.quad.length >= 2) {
-    const [a, b] = r.quad;
-    return (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
-  }
+  // Góc của CHỮ: dùng trường "rot" (không phụ thuộc việc kéo đỉnh đa giác).
   return r.rot || 0;
 }
 

@@ -1332,8 +1332,8 @@ function renderFields() {
 
     <div class="row">
       <div>
-        <label title="Xoay khung theo độ (0–360)">Xoay (°)</label>
-        <input type="number" id="fldRot" min="-180" max="180" step="1" value="${Math.round(r.rot || 0)}" ${r.shape === "quad" ? "disabled" : ""}/>
+        <label title="Xoay CHỮ theo độ (đa giác: chữ không tự xoay khi kéo đỉnh)">Xoay chữ (°)</label>
+        <input type="number" id="fldRot" min="-180" max="180" step="1" value="${Math.round(r.rot || 0)}"/>
       </div>
       <label class="inline" style="text-transform:none;color:var(--text);align-self:flex-end;padding-bottom:7px" title="Kéo các đỉnh để khớp chữ nghiêng/hình thang">
         <input type="checkbox" id="fldQuad" ${r.shape === "quad" ? "checked" : ""}/> Đa giác (4+ đỉnh)
@@ -1492,7 +1492,6 @@ function renderFields() {
     if (e.target.checked) {
       r.shape = "quad";
       r.quad = rectCorners(r);
-      r.rot = 0;
       syncQuadBbox(r);
     } else {
       r.shape = "rect";
