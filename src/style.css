@@ -129,6 +129,13 @@ select.compact { max-width: 118px; padding: 6px 6px; }
 .menu button:hover { background: var(--hover); }
 .menu button.primary { background: var(--accent-2); color: #fff; }
 .menu-sep { height: 1px; background: var(--line); margin: 5px 2px; }
+.kbd {
+  float: right; margin-left: 12px; padding: 1px 6px; border-radius: 5px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+  font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.menu button .kbd { color: var(--muted); }
+.menu-hint { padding: 4px 10px; color: var(--muted); font-size: 11px; }
 .menu-inline { display: flex; flex-direction: column; gap: 5px; padding: 7px 10px; color: var(--muted); font-size: 11px; }
 .menu-inline b { color: var(--text); }
 .menu-inline input[type="range"] { width: 100%; }

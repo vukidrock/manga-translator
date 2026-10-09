@@ -179,7 +179,23 @@ function updateTransProviderUI() {
   if (els.geminiLimits) els.geminiLimits.style.display = gem ? "" : "none";
   if (els.geminiCountdown) els.geminiCountdown.style.display = gem && cooling ? "" : "none";
   if (els.btnTranslate) els.btnTranslate.disabled = busy || cooling;
+  syncOcrButton();
   updateGeminiUsageUI();
+}
+
+// OCR chỉ cần cho dịch Offline; khi dùng Gemini thì khoá lại (Gemini tự đọc chữ từ ảnh).
+function syncOcrButton() {
+  const gem = (state.settings.transProvider || "offline") === "gemini";
+  const b = $("btnOcr");
+  const sel = els.ocrLang;
+  if (b) {
+    b.disabled = busy || gem;
+    b.title = gem ? "Không cần khi dịch bằng Gemini (Gemini đọc chữ từ ảnh)" : "Chạy OCR để điền nguyên văn (cho dịch Offline)";
+  }
+  if (sel) {
+    sel.disabled = busy || gem;
+    sel.title = gem ? "Không cần khi dùng Gemini" : "Ngôn ngữ gốc của truyện (cho OCR)";
+  }
 }
 
 function initGeminiLimitsUI() {
@@ -457,6 +473,7 @@ function setBusy(v) {
     const b = $(id);
     if (b) b.disabled = v;
   }
+  syncOcrButton();
 }
 
 let projectDirty = false;
@@ -2658,6 +2675,12 @@ async function loadProjectFile(file) {
 function wire() {
   if (els.appVersion) els.appVersion.textContent = `v${APP_VERSION}`;
   if (els.menuVersion) els.menuVersion.textContent = `Manga Translator v${APP_VERSION}`;
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
+  const mod = isMac ? "⌘" : "Ctrl+";
+  const bu = $("btnUndo");
+  const br = $("btnRedo");
+  if (bu) bu.innerHTML = `Hoàn tác <span class="kbd">${mod}Z</span>`;
+  if (br) br.innerHTML = `Làm lại <span class="kbd">${mod}${isMac ? "⇧" : "Shift+"}Z</span>`;
   $("btnAddImages").addEventListener("click", () => els.fileInput.click());
   $("btnAddUrl").addEventListener("click", openUrlModal);
   els.urlCancel.addEventListener("click", closeUrlModal);
