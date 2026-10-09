@@ -81,7 +81,7 @@ const els = {
   fileInput: $("fileInput"),
   projectInput: $("projectInput"),
   dropzone: $("dropzone"),
-  zoomLabel: $("zoomLabel"),
+  zoomSelect: $("zoomSelect"),
   showBoxes: $("showBoxes"),
   compareToggle: $("compareToggle"),
   panes: $("panes"),
@@ -742,6 +742,47 @@ function fitScale() {
   return clamp(Math.min(availW / page.width, availH / page.height), 0.05, 4);
 }
 
+function buildZoomSelect() {
+  const sel = els.zoomSelect;
+  if (!sel) return;
+  const presets = [
+    ["fit", "Vừa khung"],
+    ["0.5", "50%"],
+    ["0.75", "75%"],
+    ["1", "100%"],
+    ["1.5", "150%"],
+    ["2", "200%"],
+    ["3", "300%"],
+  ];
+  sel.innerHTML = presets.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  syncZoomSelect();
+}
+function syncZoomSelect() {
+  const sel = els.zoomSelect;
+  if (!sel) return;
+  if (state.display.fit) {
+    sel.value = "fit";
+    return;
+  }
+  const pct = Math.round(state.display.scale * 100);
+  const preset = [...sel.options].find(
+    (o) => o.value !== "fit" && Math.abs(Number(o.value) * 100 - pct) < 1,
+  );
+  if (preset) {
+    sel.value = preset.value;
+    return;
+  }
+  let custom = sel.querySelector("option[data-custom]");
+  if (!custom) {
+    custom = document.createElement("option");
+    custom.dataset.custom = "1";
+    sel.appendChild(custom);
+  }
+  custom.value = String(state.display.scale);
+  custom.textContent = `${pct}%`;
+  sel.value = custom.value;
+}
+
 function applyScale() {
   const page = activePage();
   if (!page) return;
@@ -751,12 +792,12 @@ function applyScale() {
   els.pageImg.style.height = `${page.height * s}px`;
   els.stage.style.width = `${page.width * s}px`;
   els.stage.style.height = `${page.height * s}px`;
-  els.zoomLabel.textContent = `${Math.round(s * 100)}%`;
   // khung đối chiếu hiển thị cùng tỉ lệ với bản gốc
   els.resultStage.style.width = `${page.width * s}px`;
   els.resultStage.style.height = `${page.height * s}px`;
   els.resultCanvas.style.width = `${page.width * s}px`;
   els.resultCanvas.style.height = `${page.height * s}px`;
+  syncZoomSelect();
   renderBrush();
   scheduleResult();
 }
@@ -1450,6 +1491,13 @@ document.addEventListener("keydown", (e) => {
   if (mod && !typing && (e.key === "y" || e.key === "Y")) {
     e.preventDefault();
     redo();
+    return;
+  }
+  if (mod && !typing && e.key === "0") {
+    e.preventDefault();
+    state.display.fit = true;
+    applyScale();
+    renderOverlay();
     return;
   }
 
@@ -2691,6 +2739,7 @@ function wire() {
   const br = $("btnRedo");
   if (bu) bu.innerHTML = `<i data-lucide="undo-2"></i>Hoàn tác <span class="kbd">${mod}Z</span>`;
   if (br) br.innerHTML = `<i data-lucide="redo-2"></i>Làm lại <span class="kbd">${mod}${isMac ? "⇧" : "Shift+"}Z</span>`;
+  buildZoomSelect();
   $("btnAddImages").addEventListener("click", () => els.fileInput.click());
   $("btnAddUrl").addEventListener("click", openUrlModal);
   els.urlCancel.addEventListener("click", closeUrlModal);
@@ -2853,21 +2902,39 @@ function wire() {
 
   $("zoomIn").addEventListener("click", () => {
     state.display.fit = false;
-    state.display.scale = clamp(state.display.scale * 1.2, 0.05, 6);
+    state.display.scale = clamp(state.display.scale * 1.2, 0.05, 8);
     applyScale();
     renderOverlay();
   });
   $("zoomOut").addEventListener("click", () => {
     state.display.fit = false;
-    state.display.scale = clamp(state.display.scale / 1.2, 0.05, 6);
+    state.display.scale = clamp(state.display.scale / 1.2, 0.05, 8);
     applyScale();
     renderOverlay();
   });
-  $("zoomFit").addEventListener("click", () => {
-    state.display.fit = true;
+  els.zoomSelect.addEventListener("change", () => {
+    const v = els.zoomSelect.value;
+    if (v === "fit") state.display.fit = true;
+    else {
+      state.display.fit = false;
+      state.display.scale = clamp(Number(v) || 1, 0.05, 8);
+    }
     applyScale();
     renderOverlay();
   });
+  // Ctrl/Cmd + lăn chuột để zoom
+  els.stageScroll.addEventListener(
+    "wheel",
+    (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      state.display.fit = false;
+      state.display.scale = clamp(state.display.scale * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.05, 8);
+      applyScale();
+      renderOverlay();
+    },
+    { passive: false },
+  );
 
   window.addEventListener("resize", debounce(() => {
     if (state.display.fit) {
