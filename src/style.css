@@ -219,6 +219,19 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 
 .overlay { position: absolute; inset: 0; }
 .overlay.hidden { display: none; }
+.overlay.brushing { cursor: crosshair; }
+.brush-layer { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 4; }
+
+.brush-bar {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20;
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);
+  white-space: nowrap;
+}
+.brush-bar.hidden { display: none; }
+.brush-bar .brush-title { font-weight: 700; color: var(--accent-2); }
+.brush-bar input[type="range"] { width: 110px; }
+.brush-bar button { padding: 4px 10px; }
 
 .box {
   position: absolute;

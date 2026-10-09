@@ -28,7 +28,7 @@ import {
   rectCorners,
 } from "./regions.js";
 import { renderPage, exportPageBlob, makeThumb, computeLayout } from "./render.js";
-import { inpaintImage } from "./inpaint.js";
+import { inpaintImage, inpaintRaster } from "./inpaint.js";
 import {
   createState,
   persist,
@@ -47,6 +47,13 @@ const els = {
   stage: $("stage"),
   stageScroll: $("stageScroll"),
   overlay: $("overlay"),
+  brushLayer: $("brushLayer"),
+  brushBar: $("brushBar"),
+  brushSize: $("brushSize"),
+  brushApply: $("brushApply"),
+  brushClear: $("brushClear"),
+  brushStrokeUndo: $("brushStrokeUndo"),
+  brushDone: $("brushDone"),
   pagesList: $("pagesList"),
   regionList: $("regionList"),
   fields: $("fields"),
@@ -473,6 +480,7 @@ function cloneModel(s) {
       imageBlob: p.imageBlob,
       cleanBlob: p.cleanBlob || null,
       sourceUrl: p.sourceUrl || null,
+      brushMask: p.brushMask ? structuredClone(p.brushMask) : null,
       thumb: null,
       regions: structuredClone(p.regions),
     })),
@@ -501,6 +509,7 @@ function renderAll() {
   renderFields();
   renderPages();
   updatePageInfo();
+  renderBrush();
   if (state.display.compare) renderResult();
 }
 function applySnapshot(snap) {
@@ -721,6 +730,7 @@ function applyScale() {
   els.resultStage.style.height = `${page.height * s}px`;
   els.resultCanvas.style.width = `${page.width * s}px`;
   els.resultCanvas.style.height = `${page.height * s}px`;
+  renderBrush();
   scheduleResult();
 }
 
@@ -1003,8 +1013,136 @@ let drawStart = null;
 let drawEnd = null;
 let lastClick = { id: null, t: 0 };
 
+/* ---------------- Cọ tẩy tự do ---------------- */
+let brushMode = false;
+let currentStroke = null;
+
+function brushStrokes(page) {
+  if (!page.brushMask) page.brushMask = { strokes: [] };
+  if (!page.brushMask.strokes) page.brushMask.strokes = [];
+  return page.brushMask.strokes;
+}
+function drawStrokePath(ctx, st, s) {
+  if (!st.pts || !st.pts.length) return;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.max(2, st.size * s);
+  if (st.pts.length === 1) {
+    ctx.beginPath();
+    ctx.arc(st.pts[0][0] * s, st.pts[0][1] * s, ctx.lineWidth / 2, 0, 7);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    st.pts.forEach((p, i) => (i ? ctx.lineTo(p[0] * s, p[1] * s) : ctx.moveTo(p[0] * s, p[1] * s)));
+    ctx.stroke();
+  }
+}
+function renderBrush() {
+  const canvas = els.brushLayer;
+  if (!canvas) return;
+  const page = activePage();
+  const s = state.display.scale;
+  if (!page || !brushMode) {
+    canvas.width = canvas.height = 1;
+    canvas.style.display = "none";
+    return;
+  }
+  canvas.style.display = "";
+  canvas.width = Math.round(page.width * s);
+  canvas.height = Math.round(page.height * s);
+  canvas.style.width = `${page.width * s}px`;
+  canvas.style.height = `${page.height * s}px`;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(225,29,72,0.45)";
+  ctx.strokeStyle = "rgba(225,29,72,0.45)";
+  for (const st of (page.brushMask && page.brushMask.strokes) || []) drawStrokePath(ctx, st, s);
+}
+function strokesToCanvas(page) {
+  const c = document.createElement("canvas");
+  c.width = page.width;
+  c.height = page.height;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = "#fff";
+  ctx.strokeStyle = "#fff";
+  for (const st of (page.brushMask && page.brushMask.strokes) || []) drawStrokePath(ctx, st, 1);
+  return c;
+}
+function setBrushMode(on) {
+  brushMode = on;
+  els.overlay.classList.toggle("brushing", on);
+  els.brushBar.classList.toggle("hidden", !on);
+  $("btnBrush").classList.toggle("primary", on);
+  renderBrush();
+}
+function startStroke(e) {
+  const page = activePage();
+  if (!page) return;
+  const p = toImageCoords(e);
+  currentStroke = { size: Number(els.brushSize.value) || 48, pts: [[Math.round(p.x), Math.round(p.y)]] };
+  brushStrokes(page).push(currentStroke);
+  renderBrush();
+}
+function extendStroke(e) {
+  if (!currentStroke) return;
+  const p = toImageCoords(e);
+  currentStroke.pts.push([Math.round(p.x), Math.round(p.y)]);
+  renderBrush();
+}
+function endStroke() {
+  if (!currentStroke) return;
+  currentStroke = null;
+  schedulePersist();
+}
+async function applyBrush() {
+  const page = activePage();
+  const strokes = (page && page.brushMask && page.brushMask.strokes) || [];
+  if (!page || !strokes.length) {
+    setStatus("Chưa tô vùng nào.");
+    return;
+  }
+  if (busy) return;
+  setBusy(true);
+  try {
+    setStatus("Đang chuẩn bị xoá vùng đã tô…", true);
+    const base = page.cleanBlob ? (await getCleanImage(page)).img : (await getPageImage(page)).img;
+    const mask = strokesToCanvas(page);
+    const out = await inpaintRaster(base, mask, {
+      onProgress: ({ phase, ratio }) => {
+        if (phase === "download") setStatus(`Đang tải model xoá chữ… ${Math.round(ratio * 100)}%`, true);
+        else if (phase === "inpaint") setStatus("Đang xoá & tái tạo vùng đã tô…", true);
+        else setStatus("Đang khởi tạo model…", true);
+      },
+    });
+    if (out) {
+      page.cleanBlob = await canvasToBlob(out, "image/png");
+      dropCleanImage(page.id);
+      page.brushMask = null;
+      renderBrush();
+      renderResult();
+      renderPages();
+      schedulePersist();
+      setStatus("Đã xoá vùng đã tô.", false, true);
+    } else {
+      setStatus("Không có vùng để xoá.");
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus(`Lỗi xoá cọ: ${err.message}`);
+  } finally {
+    setBusy(false);
+  }
+}
+
 els.overlay.addEventListener("pointerdown", (e) => {
   if (busy) return;
+  if (brushMode) {
+    startStroke(e);
+    e.preventDefault();
+    return;
+  }
   const quadH = e.target.closest(".quad-handle");
   const quadPoly = e.target.closest(".quad-poly");
   if (quadH) {
@@ -1108,6 +1246,11 @@ function removeVertex(r) {
 }
 
 window.addEventListener("pointermove", (e) => {
+  if (currentStroke) {
+    extendStroke(e);
+    e.preventDefault();
+    return;
+  }
   if (drawStart) {
     drawEnd = toImageCoords(e);
     updateDrawGhost(drawStart, drawEnd);
@@ -1183,6 +1326,10 @@ window.addEventListener("pointermove", (e) => {
 });
 
 window.addEventListener("pointerup", () => {
+  if (currentStroke) {
+    endStroke();
+    return;
+  }
   if (drawStart) {
     finishDraw(drawStart, drawEnd || drawStart);
     drawStart = null;
@@ -2528,6 +2675,24 @@ function wire() {
   $("btnOcr").addEventListener("click", runOcr);
   $("btnInpaint").addEventListener("click", runInpaint);
   $("btnInpaintUndo").addEventListener("click", undoInpaint);
+  $("btnBrush").addEventListener("click", () => setBrushMode(!brushMode));
+  els.brushDone.addEventListener("click", () => setBrushMode(false));
+  els.brushApply.addEventListener("click", applyBrush);
+  els.brushClear.addEventListener("click", () => {
+    const page = activePage();
+    if (page) page.brushMask = null;
+    renderBrush();
+    schedulePersist();
+  });
+  els.brushStrokeUndo.addEventListener("click", () => {
+    const page = activePage();
+    const strokes = page && page.brushMask && page.brushMask.strokes;
+    if (strokes && strokes.length) {
+      strokes.pop();
+      renderBrush();
+      schedulePersist();
+    }
+  });
   $("btnTranslate").addEventListener("click", runTranslate);
   $("btnSave").addEventListener("click", saveProject);
   $("btnNewProject").addEventListener("click", newProject);

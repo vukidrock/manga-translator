@@ -230,3 +230,93 @@ export async function inpaintImage(image, regions, { onProgress, contextPad = CO
   onProgress?.({ phase: "done", ratio: 1 });
   return output;
 }
+
+// Inpaint theo mask raster (cọ tẩy): xoá đúng vùng đã tô.
+export async function inpaintRaster(image, maskCanvas, { onProgress, contextPad = CONTEXT_PAD } = {}) {
+  const ort = getOrt();
+  const sess = await ensureInpaintModel({ onProgress });
+  const inName = sess.inputNames[0];
+  const outName = sess.outputNames[0];
+  const W = image.naturalWidth || image.width;
+  const H = image.naturalHeight || image.height;
+
+  const md = maskCanvas.getContext("2d").getImageData(0, 0, W, H).data;
+  let minx = W;
+  let miny = H;
+  let maxx = -1;
+  let maxy = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (md[(y * W + x) * 4] > 127) {
+        if (x < minx) minx = x;
+        if (x > maxx) maxx = x;
+        if (y < miny) miny = y;
+        if (y > maxy) maxy = y;
+      }
+    }
+  }
+  if (maxx < 0) return null;
+  const bb = { x: minx, y: miny, w: maxx - minx + 1, h: maxy - miny + 1 };
+  const win = clampRect(expand(bb, contextPad), W, H);
+  const S = Math.max(64, Math.max(win.w, win.h));
+  const ox = Math.floor((S - win.w) / 2);
+  const oy = Math.floor((S - win.h) / 2);
+
+  const sqImg = squareFromImage(image, win, S, ox, oy);
+  const sqMask = newCanvas(S, S);
+  const mctx = sqMask.getContext("2d");
+  mctx.fillStyle = "#000";
+  mctx.fillRect(0, 0, S, S);
+  mctx.drawImage(maskCanvas, win.x, win.y, win.w, win.h, ox, oy, win.w, win.h);
+
+  const img512 = resizeCanvas(sqImg, SIZE, true);
+  const mask512 = resizeCanvas(sqMask, SIZE, false);
+  const id = img512.getContext("2d").getImageData(0, 0, SIZE, SIZE).data;
+  const mdd = mask512.getContext("2d").getImageData(0, 0, SIZE, SIZE).data;
+  const n = SIZE * SIZE;
+  const input = new Float32Array(4 * n);
+  for (let p = 0; p < n; p++) {
+    const mk = mdd[p * 4] > 127 ? 1 : 0;
+    const inv = 1 - mk;
+    input[p] = (id[p * 4] / 255) * inv;
+    input[n + p] = (id[p * 4 + 1] / 255) * inv;
+    input[2 * n + p] = (id[p * 4 + 2] / 255) * inv;
+    input[3 * n + p] = mk;
+  }
+  onProgress?.({ phase: "inpaint", ratio: 0.3 });
+  const out = await sess.run({ [inName]: new ort.Tensor("float32", input, [1, 4, SIZE, SIZE]) });
+  const res = out[outName].data;
+
+  const outCanvas = newCanvas(SIZE, SIZE);
+  const octx2 = outCanvas.getContext("2d");
+  const oimg = octx2.createImageData(SIZE, SIZE);
+  for (let p = 0; p < n; p++) {
+    oimg.data[p * 4] = Math.max(0, Math.min(255, res[p] * 255));
+    oimg.data[p * 4 + 1] = Math.max(0, Math.min(255, res[n + p] * 255));
+    oimg.data[p * 4 + 2] = Math.max(0, Math.min(255, res[2 * n + p] * 255));
+    oimg.data[p * 4 + 3] = 255;
+  }
+  octx2.putImageData(oimg, 0, 0);
+
+  const sqOut = newCanvas(S, S);
+  sqOut.getContext("2d").drawImage(outCanvas, 0, 0, S, S);
+  const winRes = newCanvas(win.w, win.h);
+  winRes.getContext("2d").drawImage(sqOut, ox, oy, win.w, win.h, 0, 0, win.w, win.h);
+
+  const feath = newCanvas(win.w, win.h);
+  const fctx = feath.getContext("2d");
+  fctx.filter = "blur(4px)";
+  fctx.drawImage(maskCanvas, win.x, win.y, win.w, win.h, 0, 0, win.w, win.h);
+  fctx.filter = "none";
+  const wctx = winRes.getContext("2d");
+  wctx.globalCompositeOperation = "destination-in";
+  wctx.drawImage(feath, 0, 0);
+  wctx.globalCompositeOperation = "source-over";
+
+  const output = newCanvas(W, H);
+  const octx = output.getContext("2d");
+  octx.drawImage(image, 0, 0);
+  octx.drawImage(winRes, win.x, win.y);
+  onProgress?.({ phase: "done", ratio: 1 });
+  return output;
+}

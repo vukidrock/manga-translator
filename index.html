@@ -54,6 +54,7 @@
 
     <div class="group">
       <button id="btnAddRegion" title="Vẽ thêm một vùng dịch thủ công">+ Vùng</button>
+      <button id="btnBrush" title="Cọ tẩy: tô lên vùng cần xoá/tái tạo (ảnh gốc)">Cọ tẩy</button>
       <button id="btnInpaint" title="Dùng AI (LaMa) xoá chữ gốc và tái tạo nền, giữ nét vẽ">Xoá chữ AI</button>
       <button id="btnInpaintUndo" title="Bỏ nền đã xoá chữ, quay lại ảnh gốc">↺</button>
     </div>
@@ -128,6 +129,7 @@
             <div class="stage" id="stage">
               <img id="pageImg" alt="" draggable="false" />
               <div class="overlay" id="overlay"></div>
+              <canvas id="brushLayer" class="brush-layer"></canvas>
             </div>
           </div>
           <span class="pane-label">Bản gốc</span>
@@ -140,6 +142,14 @@
           </div>
           <span class="pane-label">Bản dịch</span>
         </div>
+      </div>
+      <div class="brush-bar hidden" id="brushBar">
+        <span class="brush-title">Cọ tẩy</span>
+        <label class="inline">Cỡ <input type="range" id="brushSize" min="6" max="240" value="48" /></label>
+        <button id="brushStrokeUndo" title="Bỏ nét vừa tô">↶ Nét</button>
+        <button id="brushClear" title="Xoá toàn bộ nét đã tô">Xoá nét</button>
+        <button id="brushApply" class="primary" title="Dùng AI xoá/tái tạo vùng đã tô">Xoá vùng đã tô</button>
+        <button id="brushDone">Xong</button>
       </div>
       <div class="empty-hint" id="emptyHint">
         <h2>Kéo &amp; thả ảnh manga vào đây</h2>

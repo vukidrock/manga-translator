@@ -65,6 +65,7 @@ export async function persist(state) {
           imageBlob: page.imageBlob,
           cleanBlob: page.cleanBlob || null,
           sourceUrl: page.sourceUrl || null,
+          brushMask: page.brushMask || null,
           regions: page.regions,
         });
       }
@@ -119,6 +120,7 @@ export async function createPageFromBlob(blob, name, sourceUrl = null) {
       imageBlob: blob,
       cleanBlob: null,
       sourceUrl,
+      brushMask: null,
       thumb: makeThumb(img),
       regions: [],
     };
@@ -150,6 +152,7 @@ export async function exportProject(state) {
       imageFile,
       cleanFile,
       sourceUrl: page.sourceUrl || null,
+      brushMask: page.brushMask || null,
       regions: page.regions,
     });
   }
@@ -187,6 +190,7 @@ export async function importProject(file) {
       imageBlob: typed,
       cleanBlob,
       sourceUrl: p.sourceUrl || null,
+      brushMask: p.brushMask || null,
       thumb: null,
       regions: (p.regions || []).map((r) => ({ ...r })),
     });
