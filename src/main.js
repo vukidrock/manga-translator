@@ -13,7 +13,20 @@ import { detect, CLASS_LABEL_VI } from "./detector.js";
 import { recognize, ocrCanvas } from "./ocr.js";
 import { DIRECTIONS, translateBatch } from "./translate.js";
 import { geminiTranslatePage, listGeminiModels } from "./gemini.js";
-import { buildRegions, makeRegion, FONT_FAMILIES, eraseRect, fontFamilyName, defaultStyle } from "./regions.js";
+import { APP_VERSION } from "./version.js";
+import {
+  buildRegions,
+  makeRegion,
+  FONT_FAMILIES,
+  eraseShape,
+  fontFamilyName,
+  defaultStyle,
+  regionSize,
+  regionCenter,
+  regionAngleDeg,
+  regionBounds,
+  rectCorners,
+} from "./regions.js";
 import { renderPage, exportPageBlob, makeThumb, computeLayout } from "./render.js";
 import { inpaintImage } from "./inpaint.js";
 import {
@@ -28,6 +41,8 @@ import {
 const $ = (id) => document.getElementById(id);
 const els = {
   projectName: $("projectName"),
+  appVersion: $("appVersion"),
+  menuVersion: $("menuVersion"),
   pageImg: $("pageImg"),
   stage: $("stage"),
   stageScroll: $("stageScroll"),
@@ -616,8 +631,9 @@ function applyScale() {
 }
 
 function zoomToRegion(r) {
+  const b = regionBounds(r);
   const s = clamp(
-    Math.min((els.stageScroll.clientWidth - 60) / (r.w + 40), (els.stageScroll.clientHeight - 60) / (r.h + 40)),
+    Math.min((els.stageScroll.clientWidth - 60) / (b.w + 40), (els.stageScroll.clientHeight - 60) / (b.h + 40)),
     0.2,
     10,
   );
@@ -627,8 +643,8 @@ function zoomToRegion(r) {
   renderOverlay();
   requestAnimationFrame(() => {
     const sc = els.stageScroll;
-    sc.scrollLeft = (r.x + r.w / 2) * s - sc.clientWidth / 2;
-    sc.scrollTop = (r.y + r.h / 2) * s - sc.clientHeight / 2;
+    sc.scrollLeft = (b.x + b.w / 2) * s - sc.clientWidth / 2;
+    sc.scrollTop = (b.y + b.h / 2) * s - sc.clientHeight / 2;
   });
   setStatus(`Đã zoom vào vùng (${Math.round(s * 100)}%). Bấm “Vừa” để xem toàn trang.`);
 }
@@ -667,6 +683,68 @@ function regionClass(r) {
   return r.cls === "text_bubble" ? "" : r.cls;
 }
 
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function rectFillDiv(r) {
+  const sh = eraseShape(r);
+  if (!sh || sh.kind !== "rect") return null;
+  const el = document.createElement("div");
+  el.className = "box filled";
+  el.dataset.fill = r.id;
+  el.style.background = r.style.fillColor;
+  el.style.border = "none";
+  el.style.cursor = "default";
+  return el;
+}
+function positionFill(el, r, s) {
+  const sh = eraseShape(r);
+  if (!sh) {
+    el.style.display = "none";
+    return;
+  }
+  if (sh.kind === "poly" || sh.rot) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.display = "";
+  el.style.left = `${sh.x * s}px`;
+  el.style.top = `${sh.y * s}px`;
+  el.style.width = `${sh.w * s}px`;
+  el.style.height = `${sh.h * s}px`;
+}
+
+function makePreview(r, w, h, c, ang, s) {
+  const pv = document.createElement("div");
+  pv.className = "preview";
+  pv.style.position = "absolute";
+  pv.style.left = `${(c.x - w / 2) * s}px`;
+  pv.style.top = `${(c.y - h / 2) * s}px`;
+  pv.style.width = `${w * s}px`;
+  pv.style.height = `${h * s}px`;
+  if (ang) {
+    pv.style.transform = `rotate(${ang}deg)`;
+    pv.style.transformOrigin = "center";
+  }
+  pv.style.display = "flex";
+  pv.style.pointerEvents = "none";
+  pv.style.overflow = "hidden";
+  pv.style.alignItems = r.style.valign === "top" ? "flex-start" : r.style.valign === "bottom" ? "flex-end" : "center";
+  pv.style.justifyContent = r.style.align === "left" ? "flex-start" : r.style.align === "right" ? "flex-end" : "center";
+  pv.style.textAlign = r.style.align;
+  const layout = fitPreview(r);
+  const fs = layout.size * s;
+  pv.style.font = `${r.style.italic ? "italic " : ""}${r.style.weight} ${fs}px ${r.style.family}`;
+  pv.style.lineHeight = `${layout.lh * s}px`;
+  pv.style.color = r.style.color;
+  pv.style.whiteSpace = "pre";
+  if (r.style.outline && r.style.outlineWidth > 0) {
+    pv.style.webkitTextStroke = `${r.style.outlineWidth * s}px ${r.style.outlineColor || "#fff"}`;
+    pv.style.paintOrder = "stroke";
+  }
+  pv.textContent = layout.lines.join("\n");
+  return pv;
+}
+
 function renderOverlay() {
   const page = activePage();
   const s = state.display.scale;
@@ -675,30 +753,100 @@ function renderOverlay() {
     els.overlay.innerHTML = "";
     return;
   }
+  const W = page.width;
+  const H = page.height;
   const frag = document.createDocumentFragment();
-  // Ở chế độ đối chiếu, khung "Bản gốc" phải giữ nguyên ảnh -> không phủ nền/chữ dịch.
   const showResultOnOrig = !state.display.compare;
 
+  // 1) vùng tô nền cho hình chữ nhật (kể cả xoay) — dùng DOM để kéo mượt
   if (showResultOnOrig) {
     for (const r of page.regions) {
-      const m = eraseRect(r);
-      if (m) {
-        const fill = document.createElement("div");
-        fill.className = "box filled";
-        fill.dataset.fill = r.id;
-        fill.style.left = `${m.x * s}px`;
-        fill.style.top = `${m.y * s}px`;
-        fill.style.width = `${m.w * s}px`;
-        fill.style.height = `${m.h * s}px`;
-        fill.style.background = r.style.fillColor;
-        fill.style.border = "none";
-        fill.style.cursor = "default";
-        frag.appendChild(fill);
+      if (r.shape === "quad") continue;
+      const sh = eraseShape(r);
+      if (!sh || sh.kind !== "rect") continue;
+      const fill = document.createElement("div");
+      fill.className = "box filled";
+      fill.dataset.fill = r.id;
+      fill.style.background = r.style.fillColor;
+      fill.style.border = "none";
+      fill.style.cursor = "default";
+      if (sh.rot) {
+        fill.style.left = `${(sh.cx - sh.w / 2) * s}px`;
+        fill.style.top = `${(sh.cy - sh.h / 2) * s}px`;
+        fill.style.width = `${sh.w * s}px`;
+        fill.style.height = `${sh.h * s}px`;
+        fill.style.transform = `rotate(${sh.rot}deg)`;
+        fill.style.transformOrigin = "center";
+      } else {
+        fill.style.left = `${sh.x * s}px`;
+        fill.style.top = `${sh.y * s}px`;
+        fill.style.width = `${sh.w * s}px`;
+        fill.style.height = `${sh.h * s}px`;
       }
+      frag.appendChild(fill);
     }
   }
 
+  // 2) layer SVG cho hình tứ giác (fill + viền + tay cầm)
+  const svg = document.createElementNS(SVGNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("width", W * s);
+  svg.setAttribute("height", H * s);
+  svg.style.position = "absolute";
+  svg.style.left = "0";
+  svg.style.top = "0";
+  svg.style.pointerEvents = "none";
+
   for (const r of page.regions) {
+    if (r.shape !== "quad" || !r.quad) continue;
+    const selected = r.id === selectedId;
+    if (showResultOnOrig && r.style.fill && r.style.eraseMode !== "none" && !r.style.keep) {
+      const f = document.createElementNS(SVGNS, "polygon");
+      f.setAttribute("points", r.quad.map((p) => `${p[0]},${p[1]}`).join(" "));
+      f.setAttribute("fill", r.style.fillColor || "#fff");
+      svg.appendChild(f);
+    }
+    const poly = document.createElementNS(SVGNS, "polygon");
+    poly.setAttribute(
+      "class",
+      "quad-poly" + (selected ? " selected" : "") + (r.style.keep ? " keep" : ""),
+    );
+    poly.dataset.id = r.id;
+    poly.setAttribute("points", r.quad.map((p) => `${p[0]},${p[1]}`).join(" "));
+    poly.setAttribute("fill", "rgba(59,130,246,0.10)");
+    poly.setAttribute("stroke", r.style.keep ? "#8a8a92" : "#3b82f6");
+    if (r.style.keep) poly.setAttribute("stroke-dasharray", `${6 / s} ${4 / s}`);
+    poly.setAttribute("stroke-width", 1.5 / s);
+    poly.style.pointerEvents = "auto";
+    poly.style.cursor = "move";
+    svg.appendChild(poly);
+    if (selected) {
+      r.quad.forEach((p, i) => {
+        const c = document.createElementNS(SVGNS, "circle");
+        c.setAttribute("class", "quad-handle");
+        c.dataset.id = r.id;
+        c.dataset.i = String(i);
+        c.setAttribute("cx", p[0]);
+        c.setAttribute("cy", p[1]);
+        c.setAttribute("r", 6 / s);
+        c.setAttribute("stroke-width", 1.5 / s);
+        c.style.pointerEvents = "auto";
+        c.style.cursor = "crosshair";
+        svg.appendChild(c);
+      });
+    }
+  }
+  frag.appendChild(svg);
+
+  // 3) khung chữ nhật (DOM box) + preview + tay cầm
+  for (const r of page.regions) {
+    if (r.shape === "quad") {
+      if (showResultOnOrig && r.text && !r.style.keep) {
+        const size = regionSize(r);
+        frag.appendChild(makePreview(r, size.w, size.h, regionCenter(r), regionAngleDeg(r), s));
+      }
+      continue;
+    }
     const box = document.createElement("div");
     box.className = `box ${regionClass(r)}${r.style.keep ? " keep" : ""}${r.id === selectedId ? " selected" : ""}`;
     box.dataset.id = r.id;
@@ -706,45 +854,37 @@ function renderOverlay() {
     box.style.top = `${r.y * s}px`;
     box.style.width = `${r.w * s}px`;
     box.style.height = `${r.h * s}px`;
-
+    if (r.rot) {
+      box.style.transform = `rotate(${r.rot}deg)`;
+      box.style.transformOrigin = "center";
+    }
     const tag = document.createElement("span");
     tag.className = "tag";
     tag.textContent = `${r.style.keep ? "Giữ nguyên · " : ""}${CLASS_LABEL_VI[r.cls] || r.cls}${
       r.source ? " • " + r.source.slice(0, 18) : ""
     }`;
     box.appendChild(tag);
-
     if (showResultOnOrig && r.text && !r.style.keep) {
-      const pv = document.createElement("div");
-      pv.className = "preview";
+      const pv = makePreview(r, r.w, r.h, { x: r.x + r.w / 2, y: r.y + r.h / 2 }, 0, s);
       pv.style.position = "absolute";
-      pv.style.inset = "0";
-      pv.style.display = "flex";
-      pv.style.pointerEvents = "none";
-      pv.style.overflow = "hidden";
-      pv.style.alignItems = r.style.valign === "top" ? "flex-start" : r.style.valign === "bottom" ? "flex-end" : "center";
-      pv.style.justifyContent = r.style.align === "left" ? "flex-start" : r.style.align === "right" ? "flex-end" : "center";
-      pv.style.textAlign = r.style.align;
-      const layout = fitPreview(r);
-      const fs = layout.size * s;
-      pv.style.font = `${r.style.italic ? "italic " : ""}${r.style.weight} ${fs}px ${r.style.family}`;
-      pv.style.lineHeight = `${layout.lh * s}px`;
-      pv.style.color = r.style.color;
-      pv.style.whiteSpace = "pre";
-      if (r.style.outline && r.style.outlineWidth > 0) {
-        pv.style.webkitTextStroke = `${r.style.outlineWidth * s}px ${r.style.outlineColor || "#fff"}`;
-        pv.style.paintOrder = "stroke";
-      }
-      pv.textContent = layout.lines.join("\n");
+      pv.style.left = "0";
+      pv.style.top = "0";
+      pv.style.width = "100%";
+      pv.style.height = "100%";
+      pv.style.transform = "";
       box.appendChild(pv);
     }
-
     for (const dir of ["nw", "n", "ne", "e", "se", "s", "sw", "w"]) {
       const h = document.createElement("div");
       h.className = `handle ${dir}`;
       h.dataset.dir = dir;
       box.appendChild(h);
     }
+    const rh = document.createElement("div");
+    rh.className = "handle rot";
+    rh.dataset.dir = "rot";
+    rh.title = "Xoay (giữ Shift để bắt góc 15°)";
+    box.appendChild(rh);
     frag.appendChild(box);
   }
 
@@ -771,6 +911,31 @@ let lastClick = { id: null, t: 0 };
 
 els.overlay.addEventListener("pointerdown", (e) => {
   if (busy) return;
+  const quadH = e.target.closest(".quad-handle");
+  const quadPoly = e.target.closest(".quad-poly");
+  if (quadH) {
+    const region = activePage().regions.find((r) => r.id === quadH.dataset.id);
+    if (!region) return;
+    if (region.id !== selectedId) select(region.id);
+    drag = { mode: "quadCorner", region, corner: Number(quadH.dataset.i) };
+    e.preventDefault();
+    return;
+  }
+  if (quadPoly && !drawMode) {
+    const region = activePage().regions.find((r) => r.id === quadPoly.dataset.id);
+    if (!region) return;
+    if (region.id !== selectedId) select(region.id);
+    const now = performance.now();
+    if (lastClick.id === region.id && now - lastClick.t < 350) {
+      lastClick = { id: null, t: 0 };
+      zoomToRegion(region);
+      return;
+    }
+    lastClick = { id: region.id, t: now };
+    drag = { mode: "quadMove", region, start: toImageCoords(e), origQuad: region.quad.map((p) => [p[0], p[1]]) };
+    e.preventDefault();
+    return;
+  }
   const handle = e.target.closest(".handle");
   const boxEl = e.target.closest(".box[data-id]");
   if (drawMode || !boxEl) {
@@ -797,16 +962,56 @@ els.overlay.addEventListener("pointerdown", (e) => {
   const liveBox = els.overlay.querySelector(`.box[data-id="${region.id}"]`);
   const dir = handle?.dataset.dir || "move";
   drag = {
-    mode: dir === "move" ? "move" : "resize",
+    mode: dir === "rot" ? "rotate" : dir === "move" ? "move" : "resize",
     dir,
     region,
     start: toImageCoords(e),
-    orig: { x: region.x, y: region.y, w: region.w, h: region.h },
+    orig: { x: region.x, y: region.y, w: region.w, h: region.h, rot: region.rot || 0 },
     boxEl: liveBox,
     fillEl: els.overlay.querySelector(`[data-fill="${region.id}"]`),
   };
   e.preventDefault();
 });
+
+function syncQuadBbox(r) {
+  const b = regionBounds(r);
+  r.x = Math.round(b.x);
+  r.y = Math.round(b.y);
+  r.w = Math.round(b.w);
+  r.h = Math.round(b.h);
+}
+
+function addVertex(r) {
+  const q = r.quad;
+  if (!q) return;
+  let best = 0;
+  let bestLen = -1;
+  for (let i = 0; i < q.length; i++) {
+    const a = q[i];
+    const b = q[(i + 1) % q.length];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (len > bestLen) {
+      bestLen = len;
+      best = i;
+    }
+  }
+  const a = q[best];
+  const b = q[(best + 1) % q.length];
+  q.splice(best + 1, 0, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]);
+  syncQuadBbox(r);
+  renderOverlay();
+  renderFields();
+  schedulePersist();
+}
+
+function removeVertex(r) {
+  if (!r.quad || r.quad.length <= 3) return;
+  r.quad.pop();
+  syncQuadBbox(r);
+  renderOverlay();
+  renderFields();
+  schedulePersist();
+}
 
 window.addEventListener("pointermove", (e) => {
   if (drawStart) {
@@ -817,37 +1022,69 @@ window.addEventListener("pointermove", (e) => {
   if (!drag) return;
   const s = state.display.scale;
   const p = toImageCoords(e);
+  const r = drag.region;
+
+  if (drag.mode === "quadCorner") {
+    r.quad[drag.corner] = [Math.round(p.x), Math.round(p.y)];
+    syncQuadBbox(r);
+    renderOverlay();
+    e.preventDefault();
+    return;
+  }
+  if (drag.mode === "quadMove") {
+    const dx = p.x - drag.start.x;
+    const dy = p.y - drag.start.y;
+    r.quad = drag.origQuad.map((q) => [Math.round(q[0] + dx), Math.round(q[1] + dy)]);
+    syncQuadBbox(r);
+    renderOverlay();
+    e.preventDefault();
+    return;
+  }
+  if (drag.mode === "rotate") {
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    let ang = (Math.atan2(p.y - cy, p.x - cx) * 180) / Math.PI + 90;
+    ang = e.shiftKey ? Math.round(ang / 15) * 15 : Math.round(ang);
+    r.rot = ((ang + 180) % 360) - 180;
+    renderOverlay();
+    e.preventDefault();
+    return;
+  }
+
   const dx = p.x - drag.start.x;
   const dy = p.y - drag.start.y;
-  const r = drag.region;
-  let { x, y, w, h } = drag.orig;
   if (drag.mode === "move") {
-    x = drag.orig.x + dx;
-    y = drag.orig.y + dy;
-  } else {
+    r.x = Math.round(drag.orig.x + dx);
+    r.y = Math.round(drag.orig.y + dy);
+  } else if (drag.mode === "resize") {
+    const a = ((drag.orig.rot || 0) * Math.PI) / 180;
+    const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    const R = (px, py) => [px * cos - py * sin, px * sin + py * cos];
+    const Rinv = (px, py) => [px * cos + py * sin, -px * sin + py * cos];
+    const ocx = drag.orig.x + drag.orig.w / 2;
+    const ocy = drag.orig.y + drag.orig.h / 2;
     const dir = drag.dir;
-    if (dir.includes("w")) {
-      x = drag.orig.x + dx;
-      w = drag.orig.w - dx;
-    }
-    if (dir.includes("e")) w = drag.orig.w + dx;
-    if (dir.includes("n")) {
-      y = drag.orig.y + dy;
-      h = drag.orig.h - dy;
-    }
-    if (dir.includes("s")) h = drag.orig.h + dy;
-    if (w < 12) w = 12;
-    if (h < 12) h = 12;
+    const signX = dir.includes("w") ? 1 : dir.includes("e") ? -1 : 0;
+    const signY = dir.includes("n") ? 1 : dir.includes("s") ? -1 : 0;
+    const [alx, aly] = R((signX * drag.orig.w) / 2, (signY * drag.orig.h) / 2);
+    const awx = ocx + alx;
+    const awy = ocy + aly;
+    const [lpx, lpy] = Rinv(p.x - awx, p.y - awy);
+    let nw = signX !== 0 ? Math.abs(lpx) : drag.orig.w;
+    let nh = signY !== 0 ? Math.abs(lpy) : drag.orig.h;
+    nw = Math.max(12, nw);
+    nh = Math.max(12, nh);
+    const [nalx, naly] = R(signX !== 0 ? (signX * nw) / 2 : 0, signY !== 0 ? (signY * nh) / 2 : 0);
+    const ncx = awx - nalx;
+    const ncy = awy - naly;
+    r.w = Math.round(nw);
+    r.h = Math.round(nh);
+    r.x = Math.round(ncx - nw / 2);
+    r.y = Math.round(ncy - nh / 2);
   }
-  r.x = Math.round(x);
-  r.y = Math.round(y);
-  r.w = Math.round(w);
-  r.h = Math.round(h);
   positionBox(drag.boxEl, r, s);
-  if (drag.fillEl) {
-    const m = eraseRect(r);
-    if (m) positionBox(drag.fillEl, m, s);
-  }
+  if (drag.fillEl) positionFill(drag.fillEl, r, s);
   e.preventDefault();
 });
 
@@ -862,11 +1099,13 @@ window.addEventListener("pointerup", () => {
     drag = null;
     renderOverlay();
     renderRegionsList();
-    persistSoon();
+    renderFields();
+    schedulePersist();
   }
 });
 
 function positionBox(el, r, s) {
+  if (!el) return;
   el.style.left = `${r.x * s}px`;
   el.style.top = `${r.y * s}px`;
   el.style.width = `${r.w * s}px`;
@@ -950,9 +1189,7 @@ document.addEventListener("keydown", (e) => {
 
 function select(id) {
   selectedId = id;
-  for (const el of els.overlay.querySelectorAll(".box[data-id]")) {
-    el.classList.toggle("selected", el.dataset.id === id);
-  }
+  renderOverlay();
   renderRegionsList();
   renderFields();
 }
@@ -1092,6 +1329,20 @@ function renderFields() {
     <label class="inline" style="text-transform:none;color:var(--text)" title="Không dịch, không xoá nền, không vẽ đè vùng này — giữ nguyên nét gốc (ví dụ tên riêng). Phím tắt: K (hoặc Alt+K khi đang gõ)">
       <input type="checkbox" id="fldKeep" ${r.style.keep ? "checked" : ""}/> Giữ nguyên (tên riêng — không dịch/xoá)
     </label>
+
+    <div class="row">
+      <div>
+        <label title="Xoay khung theo độ (0–360)">Xoay (°)</label>
+        <input type="number" id="fldRot" min="-180" max="180" step="1" value="${Math.round(r.rot || 0)}" ${r.shape === "quad" ? "disabled" : ""}/>
+      </div>
+      <label class="inline" style="text-transform:none;color:var(--text);align-self:flex-end;padding-bottom:7px" title="Kéo các đỉnh để khớp chữ nghiêng/hình thang">
+        <input type="checkbox" id="fldQuad" ${r.shape === "quad" ? "checked" : ""}/> Đa giác (4+ đỉnh)
+      </label>
+    </div>
+    ${r.shape === "quad" ? `<div class="region-actions">
+      <button id="btnAddVertex" title="Thêm một đỉnh vào cạnh dài nhất">+ Đỉnh</button>
+      <button id="btnDelVertex" ${r.quad.length <= 3 ? "disabled" : ""} title="Bỏ đỉnh cuối">− Đỉnh</button>
+    </div>` : ""}
 
     <div>
       <label>Xoá nền gốc</label>
@@ -1233,6 +1484,25 @@ function renderFields() {
     renderRegionsList();
     schedulePersist();
   });
+  on("#fldRot", "input", (e) => {
+    r.rot = Number(e.target.value) || 0;
+    refresh();
+  });
+  on("#fldQuad", "change", (e) => {
+    if (e.target.checked) {
+      r.shape = "quad";
+      r.quad = rectCorners(r);
+      r.rot = 0;
+      syncQuadBbox(r);
+    } else {
+      r.shape = "rect";
+      r.quad = null;
+    }
+    renderFields();
+    refresh();
+  });
+  on("#btnAddVertex", "click", () => addVertex(r));
+  on("#btnDelVertex", "click", () => removeVertex(r));
   on("#fldEraseMode", "change", (e) => {
     r.style.eraseMode = e.target.value;
     r.style.fill = e.target.value !== "none";
@@ -1477,12 +1747,26 @@ async function buildNumberedImage(page, targets) {
   ctx.font = `bold ${fs}px sans-serif`;
   ctx.textBaseline = "middle";
   targets.forEach((r, i) => {
-    const x = r.x * s;
-    const y = r.y * s;
-    const w = r.w * s;
-    const h = r.h * s;
+    const b = regionBounds(r);
+    const x = b.x * s;
+    const y = b.y * s;
+    const w = b.w * s;
+    const h = b.h * s;
     ctx.strokeStyle = "#e11d48";
-    ctx.strokeRect(x, y, w, h);
+    if (r.shape === "quad" && r.quad) {
+      ctx.beginPath();
+      r.quad.forEach((pt, k) => (k ? ctx.lineTo(pt[0] * s, pt[1] * s) : ctx.moveTo(pt[0] * s, pt[1] * s)));
+      ctx.closePath();
+      ctx.stroke();
+    } else if (r.rot) {
+      const corners = rectCorners(r);
+      ctx.beginPath();
+      corners.forEach((pt, k) => (k ? ctx.lineTo(pt[0] * s, pt[1] * s) : ctx.moveTo(pt[0] * s, pt[1] * s)));
+      ctx.closePath();
+      ctx.stroke();
+    } else {
+      ctx.strokeRect(x, y, w, h);
+    }
     const label = String(i + 1);
     const bw = ctx.measureText(label).width + fs * 0.6;
     ctx.fillStyle = "#e11d48";
@@ -2116,6 +2400,8 @@ async function loadProjectFile(file) {
 /* ---------------- UI wiring ---------------- */
 
 function wire() {
+  if (els.appVersion) els.appVersion.textContent = `v${APP_VERSION}`;
+  if (els.menuVersion) els.menuVersion.textContent = `Manga Translator v${APP_VERSION}`;
   $("btnAddImages").addEventListener("click", () => els.fileInput.click());
   $("btnAddUrl").addEventListener("click", openUrlModal);
   els.urlCancel.addEventListener("click", closeUrlModal);

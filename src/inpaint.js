@@ -1,4 +1,5 @@
 import { getOrt, fetchCached } from "./detector.js";
+import { pathShape, rectCorners } from "./regions.js";
 
 const MODEL_URL =
   "https://huggingface.co/Liiesl/lama-manga-onnx-quant/resolve/main/lama-manga_int8.onnx";
@@ -63,9 +64,23 @@ function clampRect(r, W, H) {
   return { x, y, w: Math.min(W - x, Math.ceil(r.w)), h: Math.min(H - y, Math.ceil(r.h)) };
 }
 
-// Vùng cần xoá để inpaint (ô chữ + lề nhỏ). Luôn xoá chữ gốc bất kể eraseMode.
-function inpaintRect(r) {
-  return { x: r.x - 3, y: r.y - 3, w: r.w + 6, h: r.h + 6 };
+// Vùng cần xoá để inpaint: dùng theo hình của vùng (rect/xoay/tứ giác), luôn xoá chữ gốc.
+function shapeFor(r) {
+  if (r.shape === "quad" && r.quad) return { kind: "poly", pts: r.quad.map((p) => [p[0], p[1]]) };
+  if (r.rot) return { kind: "rect", cx: r.x + r.w / 2, cy: r.y + r.h / 2, w: r.w + 6, h: r.h + 6, rot: r.rot };
+  return { kind: "rect", x: r.x - 3, y: r.y - 3, w: r.w + 6, h: r.h + 6, rot: 0 };
+}
+function shapeBounds(s) {
+  const pts = s.kind === "poly" ? s.pts : rectCorners({ x: 0, y: 0, w: 0, h: 0, ...rectAsRect(s) });
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+function rectAsRect(s) {
+  if (!s.rot) return { x: s.x, y: s.y, w: s.w, h: s.h };
+  return { x: s.cx - s.w / 2, y: s.cy - s.h / 2, w: s.w, h: s.h, rot: s.rot };
 }
 
 function expand(r, p) {
@@ -93,13 +108,17 @@ function squareFromImage(src, win, S, ox, oy) {
   return c;
 }
 
-function squareMask(rect, win, S, ox, oy) {
+function squareMask(shape, win, S, ox, oy) {
   const c = newCanvas(S, S);
   const ctx = c.getContext("2d");
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, S, S);
+  ctx.save();
+  ctx.translate(ox - win.x, oy - win.y);
   ctx.fillStyle = "#fff";
-  ctx.fillRect(ox + (rect.x - win.x), oy + (rect.y - win.y), rect.w, rect.h);
+  pathShape(ctx, shape);
+  ctx.fill();
+  ctx.restore();
   return c;
 }
 
@@ -129,20 +148,24 @@ export async function inpaintImage(image, regions, { onProgress, contextPad = CO
   const octx = output.getContext("2d");
   octx.drawImage(image, 0, 0);
 
-  const targets = regions
-    .filter((r) => !r.style?.keep)
-    .map((r) => clampRect(inpaintRect(r), W, H))
-    .filter((r) => r.w >= 3 && r.h >= 3);
+  const targets = [];
+  for (const r of regions) {
+    if (r.style?.keep) continue;
+    const shape = shapeFor(r);
+    const bb = shapeBounds(shape);
+    if (bb.w < 3 || bb.h < 3) continue;
+    targets.push({ shape, bb });
+  }
 
   for (let i = 0; i < targets.length; i++) {
-    const rect = targets[i];
-    const win = clampRect(expand(rect, contextPad), W, H);
+    const { shape, bb } = targets[i];
+    const win = clampRect(expand(bb, contextPad), W, H);
     const S = Math.max(64, Math.max(win.w, win.h));
     const ox = Math.floor((S - win.w) / 2);
     const oy = Math.floor((S - win.h) / 2);
 
     const sqImg = squareFromImage(image, win, S, ox, oy);
-    const sqMask = squareMask(rect, win, S, ox, oy);
+    const sqMask = squareMask(shape, win, S, ox, oy);
 
     const img512 = resizeCanvas(sqImg, SIZE, true);
     const mask512 = resizeCanvas(sqMask, SIZE, false);
@@ -188,7 +211,11 @@ export async function inpaintImage(image, regions, { onProgress, contextPad = CO
     const fctx = feath.getContext("2d");
     fctx.filter = "blur(4px)";
     fctx.fillStyle = "#fff";
-    fctx.fillRect(rect.x - win.x, rect.y - win.y, rect.w, rect.h);
+    fctx.save();
+    fctx.translate(-win.x, -win.y);
+    pathShape(fctx, shape);
+    fctx.fill();
+    fctx.restore();
     fctx.filter = "none";
 
     const wctx = winRes.getContext("2d");

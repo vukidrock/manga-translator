@@ -254,6 +254,13 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .handle.s { left: 50%; bottom: -5px; transform: translateX(-50%); cursor: ns-resize; }
 .handle.w { left: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
 .handle.e { right: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize; }
+.handle.rot {
+  left: 50%; top: -26px; transform: translateX(-50%);
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff; cursor: grab;
+}
+.quad-handle { fill: #ffffff; stroke: var(--accent); }
+.quad-poly.selected { fill: rgba(59, 130, 246, 0.22); }
 
 .empty-hint {
   position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -319,6 +326,8 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .dot.partial { background: #d97706; }
 .dot.done { background: #16a34a; }
 .statusbar #pageInfo { margin-left: 14px; }
+.statusbar .version { margin-left: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.menu-version { padding: 6px 10px; margin-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 
 .dropzone {
   position: fixed; inset: 0; display: none; align-items: center; justify-content: center;

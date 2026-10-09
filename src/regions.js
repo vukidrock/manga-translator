@@ -48,6 +48,9 @@ export function makeRegion({ cls = "manual", box, bubble = null, source = "", te
   return {
     id: uid("r"),
     cls,
+    shape: "rect",
+    rot: 0,
+    quad: null,
     x: Math.round(box.x),
     y: Math.round(box.y),
     w: Math.round(box.w),
@@ -61,26 +64,121 @@ export function makeRegion({ cls = "manual", box, bubble = null, source = "", te
   };
 }
 
-// Vùng thực sự bị xoá (tô nền) trước khi vẽ bản dịch.
-// - "text": chỉ tô đúng ô chữ (nới nhẹ 2px để phủ hết nét chữ gốc) -> giữ nguyên viền bong bóng.
-// - "bubble": tô bounding-box bong bóng, thu vào "eraseInset"px để chừa lại viền/đường nét.
-// - "none": không xoá gì.
-export function eraseRect(r) {
-  const style = r.style || {};
-  if (style.keep) return null;
-  if (style.eraseMode === "none" || style.fill === false) return null;
-  if (style.eraseMode === "bubble" && r.bubble) {
-    const ins = style.eraseInset || 0;
+// Góc của 4 đỉnh hình chữ nhật (đã tính xoay) theo thứ tự TL, TR, BR, BL.
+export function rectCorners(r) {
+  const cx = r.x + r.w / 2;
+  const cy = r.y + r.h / 2;
+  const a = ((r.rot || 0) * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const hw = r.w / 2;
+  const hh = r.h / 2;
+  const pt = (dx, dy) => [cx + dx * cos - dy * sin, cy + dx * sin + dy * cos];
+  return [pt(-hw, -hh), pt(hw, -hh), pt(hw, hh), pt(-hw, hh)];
+}
+
+export function regionCenter(r) {
+  if (r.shape === "quad" && r.quad) {
+    let sx = 0;
+    let sy = 0;
+    for (const p of r.quad) {
+      sx += p[0];
+      sy += p[1];
+    }
+    return { x: sx / r.quad.length, y: sy / r.quad.length };
+  }
+  return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+}
+
+export function regionAngleDeg(r) {
+  if (r.shape === "quad" && r.quad && r.quad.length >= 2) {
+    const [a, b] = r.quad;
+    return (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+  }
+  return r.rot || 0;
+}
+
+export function regionSize(r) {
+  if (r.shape === "quad" && r.quad && r.quad.length >= 2) {
+    const c = regionCenter(r);
+    const ang = (regionAngleDeg(r) * Math.PI) / 180;
+    const cs = Math.cos(-ang);
+    const sn = Math.sin(-ang);
+    let minx = Infinity;
+    let miny = Infinity;
+    let maxx = -Infinity;
+    let maxy = -Infinity;
+    for (const p of r.quad) {
+      const dx = p[0] - c.x;
+      const dy = p[1] - c.y;
+      const rx = dx * cs - dy * sn;
+      const ry = dx * sn + dy * cs;
+      minx = Math.min(minx, rx);
+      maxx = Math.max(maxx, rx);
+      miny = Math.min(miny, ry);
+      maxy = Math.max(maxy, ry);
+    }
+    return { w: Math.max(8, maxx - minx), h: Math.max(8, maxy - miny) };
+  }
+  return { w: r.w, h: r.h };
+}
+
+// Bao lồi trục (bbox) của vùng, dùng cho cửa sổ inpaint / danh sách.
+export function regionBounds(r) {
+  const pts = r.shape === "quad" && r.quad ? r.quad : r.rot ? rectCorners(r) : [[r.x, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h], [r.x, r.y + r.h]];
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+// Mô tả vùng cần tô/xoá. Trả về {kind:'rect',...} | {kind:'poly', pts} | null.
+// - "text": tô đúng ô chữ (nới 2px) -> giữ viền bong bóng. - "bubble": tô bbox bong bóng thu vào eraseInset.
+export function eraseShape(r) {
+  const st = r.style || {};
+  if (st.keep) return null;
+  if (st.eraseMode === "none" || st.fill === false) return null;
+  const ins = st.eraseInset || 0;
+  if (r.shape === "quad" && r.quad) {
+    return { kind: "poly", pts: r.quad.map((p) => [p[0], p[1]]) };
+  }
+  if (r.rot) {
+    let cx = r.x + r.w / 2;
+    let cy = r.y + r.h / 2;
+    let w = r.w + 4;
+    let h = r.h + 4;
+    if (st.eraseMode === "bubble" && r.bubble) {
+      cx = r.bubble.x + r.bubble.w / 2;
+      cy = r.bubble.y + r.bubble.h / 2;
+      w = Math.max(1, r.bubble.w - 2 * ins);
+      h = Math.max(1, r.bubble.h - 2 * ins);
+    }
+    return { kind: "rect", cx, cy, w, h, rot: r.rot };
+  }
+  if (st.eraseMode === "bubble" && r.bubble) {
     const b = r.bubble;
-    return {
-      x: b.x + ins,
-      y: b.y + ins,
-      w: Math.max(1, b.w - 2 * ins),
-      h: Math.max(1, b.h - 2 * ins),
-    };
+    return { kind: "rect", x: b.x + ins, y: b.y + ins, w: Math.max(1, b.w - 2 * ins), h: Math.max(1, b.h - 2 * ins), rot: 0 };
   }
   const pad = 2;
-  return { x: r.x - pad, y: r.y - pad, w: r.w + 2 * pad, h: r.h + 2 * pad };
+  return { kind: "rect", x: r.x - pad, y: r.y - pad, w: r.w + 2 * pad, h: r.h + 2 * pad, rot: 0 };
+}
+
+// Vẽ đường bao của một descriptor lên ctx (dùng cho fill hoặc clip).
+export function pathShape(ctx, s) {
+  ctx.beginPath();
+  if (s.kind === "poly") {
+    s.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    ctx.closePath();
+  } else if (s.rot) {
+    ctx.save();
+    ctx.translate(s.cx, s.cy);
+    ctx.rotate((s.rot * Math.PI) / 180);
+    ctx.rect(-s.w / 2, -s.h / 2, s.w, s.h);
+    ctx.restore();
+  } else {
+    ctx.rect(s.x, s.y, s.w, s.h);
+  }
 }
 
 export function buildRegions(dets) {
