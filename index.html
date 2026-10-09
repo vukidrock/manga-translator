@@ -173,16 +173,22 @@
         </ol>
       </div>
       <div class="zoombar">
-        <button id="zoomOut" title="Thu nhỏ">−</button>
-        <span id="zoomLabel">100%</span>
-        <button id="zoomIn" title="Phóng to">+</button>
-        <button id="zoomFit" title="Vừa khung">Vừa</button>
-        <label class="inline" title="Hiện/ẩn các vùng đã nhận diện">
-          <input type="checkbox" id="showBoxes" checked /> Vùng
-        </label>
-        <label class="inline" title="Mở khung thứ hai để đối chiếu bản gốc và bản dịch">
-          <input type="checkbox" id="compareToggle" /> Đối chiếu
-        </label>
+        <div class="zone left">
+          <label class="inline" title="Hiện/ẩn các vùng đã nhận diện trên Bản gốc">
+            <input type="checkbox" id="showBoxes" checked /> Vùng
+          </label>
+        </div>
+        <div class="zone center">
+          <button id="zoomOut" title="Thu nhỏ">−</button>
+          <span id="zoomLabel">100%</span>
+          <button id="zoomIn" title="Phóng to">+</button>
+          <button id="zoomFit" title="Vừa khung">Vừa</button>
+        </div>
+        <div class="zone right">
+          <label class="inline" title="Mở khung thứ hai để đối chiếu Bản gốc và Bản dịch">
+            <input type="checkbox" id="compareToggle" /> Đối chiếu
+          </label>
+        </div>
       </div>
     </section>
 
