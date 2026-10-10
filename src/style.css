@@ -443,7 +443,7 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* Responsive: ẩn bớt phần phụ để thanh trên/dưới gọn theo bề rộng */
-@media (max-width: 1400px) {
+@media (max-width: 1460px) {
   .toolbar .brand { display: none; }
 }
 @media (max-width: 1140px) {
