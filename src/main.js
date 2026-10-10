@@ -397,6 +397,25 @@ function applyGlobalToRegion(r) {
   for (const k of GLOBAL_KEYS) r.style[k] = state.settings.style[k];
 }
 
+function fontStack(name) {
+  const n = String(name).trim().replace(/['"]/g, "");
+  return `'${n}', 'Be Vietnam Pro', sans-serif`;
+}
+function customFontName(family) {
+  const n = fontFamilyName(family);
+  return FONT_FAMILIES.some((f) => fontFamilyName(f.value) === n) ? "" : n;
+}
+async function loadLocalFonts() {
+  if (!("queryLocalFonts" in window)) {
+    throw new Error("Trình duyệt không hỗ trợ đọc font trong máy (chỉ Chrome/Edge).");
+  }
+  const fonts = await window.queryLocalFonts();
+  const names = [...new Set(fonts.map((f) => f.family))].sort((a, b) => a.localeCompare(b));
+  const dl = document.getElementById("localFontsList");
+  if (dl) dl.innerHTML = names.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("");
+  return names;
+}
+
 function updateGlobalStyle(key, value) {
   state.settings.style[key] = value;
   for (const page of state.pages) {
@@ -419,6 +438,10 @@ function renderGlobalFields() {
     <div>
       <label>Kiểu chữ</label>
       <select id="gFamily">${fontOptions}</select>
+    </div>
+    <div class="row">
+      <input type="text" id="gFontCustom" list="localFontsList" placeholder="Font tùy chỉnh…" value="${escapeHtml(customFontName(g.family))}"/>
+      <button id="gFontPick" title="Chọn font cài trong máy (Chrome/Edge)">Font máy</button>
     </div>
     <div class="grid3">
       <div><label>Cỡ (khi không tự co)</label><input type="number" id="gSize" min="7" max="160" value="${g.size}"/></div>
@@ -450,6 +473,19 @@ function renderGlobalFields() {
 
   const on = (id, ev, fn) => els.globalFields.querySelector(id)?.addEventListener(ev, fn);
   on("#gFamily", "change", (e) => updateGlobalStyle("family", e.target.value));
+  on("#gFontCustom", "change", (e) => {
+    const n = e.target.value.trim();
+    if (n) updateGlobalStyle("family", fontStack(n));
+  });
+  on("#gFontPick", "click", async () => {
+    try {
+      await loadLocalFonts();
+      els.globalFields.querySelector("#gFontCustom")?.focus();
+      setStatus("Gõ hoặc chọn font từ gợi ý.");
+    } catch (err) {
+      setStatus(err.message);
+    }
+  });
   on("#gWeight", "change", (e) => updateGlobalStyle("weight", e.target.value));
   on("#gColor", "input", (e) => updateGlobalStyle("color", e.target.value));
   on("#gTransform", "change", (e) => updateGlobalStyle("textTransform", e.target.value));
@@ -1596,6 +1632,10 @@ function renderFields() {
       <label>Kiểu chữ</label>
       <select id="fldFamily" ${dis}>${fontOptions}</select>
       <div class="region-actions">
+        <input type="text" id="fldFontCustom" list="localFontsList" placeholder="Font tùy chỉnh…" value="${escapeHtml(customFontName(r.style.family))}"/>
+        <button id="fldFontPick" title="Chọn font cài trong máy (Chrome/Edge)">Font máy</button>
+      </div>
+      <div class="region-actions">
         <button id="btnFamilyAll" style="flex:1" title="Đặt kiểu chữ này cho mọi vùng của tất cả các trang">Áp dụng cho tất cả vùng</button>
       </div>
     </div>
@@ -1754,6 +1794,23 @@ function renderFields() {
     ensureCustom(r);
     r.style.family = e.target.value;
     refresh();
+  });
+  on("#fldFontCustom", "change", (e) => {
+    const n = e.target.value.trim();
+    if (!n) return;
+    ensureCustom(r);
+    r.style.family = fontStack(n);
+    renderFields();
+    refresh();
+  });
+  on("#fldFontPick", "click", async () => {
+    try {
+      await loadLocalFonts();
+      els.fields.querySelector("#fldFontCustom")?.focus();
+      setStatus("Gõ hoặc chọn font từ gợi ý.");
+    } catch (err) {
+      setStatus(err.message);
+    }
   });
   on("#btnFamilyAll", "click", () => {
     for (const page of state.pages) for (const reg of page.regions) reg.style.family = r.style.family;
