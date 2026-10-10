@@ -1965,8 +1965,8 @@ function updatePageInfo() {
 
 /* ---------------- Detection ---------------- */
 
-async function runDetect() {
-  const page = activePage();
+async function runDetect(pageArg) {
+  const page = pageArg || activePage();
   if (!page || busy) return;
   const { img } = await getPageImage(page);
   setBusy(true);
@@ -2048,8 +2048,8 @@ function looksGarbled(text) {
   return letters / t.length < 0.5;
 }
 
-async function runOcr() {
-  const page = activePage();
+async function runOcr(pageArg) {
+  const page = pageArg || activePage();
   if (!page || busy) return;
   if (!page.regions.length) {
     setStatus("Chưa có vùng nào. Hãy bấm “Nhận diện” trước.");
@@ -2155,10 +2155,10 @@ function prefillFromTM(page) {
   return n;
 }
 
-async function runTranslate() {
+async function runTranslate(pageArg) {
   const provider = state.settings.transProvider || "offline";
-  if (provider === "gemini") return runGeminiTranslate();
-  return runOfflineTranslate();
+  if (provider === "gemini") return runGeminiTranslate(pageArg);
+  return runOfflineTranslate(pageArg);
 }
 
 // Tự động cả trang: Nhận diện → (OCR nếu Offline) → Dịch → Xoá chữ
@@ -2174,8 +2174,8 @@ async function runAuto() {
   els.btnAuto.disabled = true;
   try {
     if (!page.regions.length) {
-      await runDetect();
-      if (!activePage() || !activePage().regions.length) {
+      await runDetect(page);
+      if (!page.regions.length) {
         setStatus("Tự động: không phát hiện được vùng nào.");
         return;
       }
@@ -2183,10 +2183,10 @@ async function runAuto() {
     const provider = state.settings.transProvider || "offline";
     const active = page.regions.filter((r) => !r.style.keep);
     const needOcr = provider !== "gemini" && active.some((r) => !(r.source || "").trim());
-    if (needOcr) await runOcr();
-    await runTranslate();
-    if (page.regions.some((r) => !r.style.keep)) await runInpaint();
-    setStatus("Tự động xong: đã nhận diện, dịch và xoá chữ trang này.", false, true);
+    if (needOcr) await runOcr(page);
+    await runTranslate(page);
+    if (page.regions.some((r) => !r.style.keep)) await runInpaint(page);
+    setStatus("Tự động xong: đã nhận diện, dịch và xoá chữ trang đã chọn.", false, true);
   } catch (err) {
     console.error(err);
     setStatus(`Tự động lỗi: ${err.message}`);
@@ -2204,8 +2204,8 @@ function closeHelp() {
   els.helpModal.classList.add("hidden");
 }
 
-async function runOfflineTranslate() {
-  const page = activePage();
+async function runOfflineTranslate(pageArg) {
+  const page = pageArg || activePage();
   if (!page || busy) return;
   const dir = els.transDir.value;
   prefillFromTM(page);
@@ -2335,8 +2335,8 @@ async function callGeminiWithRetry(opts, modelOrder, count) {
   throw err;
 }
 
-async function runGeminiTranslate() {
-  const page = activePage();
+async function runGeminiTranslate(pageArg) {
+  const page = pageArg || activePage();
   if (!page || busy) return;
   const key = (els.geminiKey.value || "").trim();
   if (!key) {
@@ -2419,8 +2419,8 @@ async function runGeminiTranslate() {
 
 /* ---------------- Xoá chữ bằng AI (LaMa inpaint) ---------------- */
 
-async function runInpaint() {
-  const page = activePage();
+async function runInpaint(pageArg) {
+  const page = pageArg || activePage();
   if (!page || busy) return;
   if (!page.regions.length) {
     setStatus("Chưa có vùng nào. Hãy bấm “Nhận diện” trước.");
