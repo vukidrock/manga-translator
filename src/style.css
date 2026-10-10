@@ -227,6 +227,12 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   opacity: 0; font-size: 12px; line-height: 1.4;
 }
 .page-thumb:hover .del { opacity: 1; }
+.page-thumb .restore {
+  position: absolute; top: 3px; right: 26px;
+  background: rgba(124,58,237,.85); color: #fff; border: none; padding: 1px 6px; border-radius: 5px;
+  opacity: 0; font-size: 12px; line-height: 1.4;
+}
+.page-thumb:hover .restore { opacity: 1; }
 .page-thumb .badge {
   position: absolute; bottom: 4px; right: 4px; color: #fff;
   background: var(--accent-2); font-size: 10px; padding: 1px 5px; border-radius: 5px;

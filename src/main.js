@@ -669,11 +669,13 @@ async function renderPages() {
     if (page.width && page.height) div.style.aspectRatio = `${page.width} / ${page.height}`;
     const status = pageStatus(page);
     const count = (page.regions || []).filter((r) => (r.text || "").trim() && !r.style.keep).length;
+    const hasClean = !!page.cleanBlob || !!(page.brushMask && (page.brushMask.strokes || []).length);
     div.innerHTML = `
       <img ${page.thumb ? `src="${page.thumb}"` : ""} alt="">
       <span class="num ${status}" title="${STATUS_LABEL[status]}">${i + 1}</span>
       <button class="del" title="Xoá trang">×</button>
       ${page.sourceUrl ? '<button class="copy" title="Sao chép URL nguồn">URL</button>' : ""}
+      ${hasClean ? '<button class="restore" title="Phục hồi ảnh gốc (bỏ nền đã xoá chữ AI)">↺</button>' : ""}
       ${page.cleanBlob ? '<span class="badge ai" title="Đã xoá chữ bằng AI">AI</span>' : ""}
       ${count ? `<span class="badge" title="${count} vùng đã dịch">${count}</span>` : ""}`;
     if (!page.thumb) queueThumb(page, div.querySelector("img"));
@@ -684,6 +686,10 @@ async function renderPages() {
       }
       if (e.target.closest(".copy")) {
         copyPageUrl(page.id);
+        return;
+      }
+      if (e.target.closest(".restore")) {
+        restorePageClean(page.id);
         return;
       }
       setActivePage(page.id);
@@ -2566,6 +2572,26 @@ function undoInpaint() {
   renderPages();
   renderResult();
   setStatus("Đã bỏ nền đã xoá chữ, quay lại ảnh gốc.", false, true);
+}
+
+// Phục hồi ảnh gốc cho bất kỳ trang nào trong danh sách: gỡ nền đã xoá chữ AI (giữ vùng + bản dịch).
+function restorePageClean(pageId) {
+  const page = state.pages.find((p) => p.id === pageId);
+  if (!page) return;
+  const hasStrokes = !!(page.brushMask && (page.brushMask.strokes || []).length);
+  if (!page.cleanBlob && !hasStrokes) return;
+  const n = pageNumber(pageId);
+  if (!confirm(`Phục hồi ảnh gốc cho trang ${n}?\n\nGỡ nền đã xoá chữ AI và nét cọ (giữ nguyên vùng nhận diện và bản dịch).`)) return;
+  page.cleanBlob = null;
+  page.brushMask = null;
+  dropCleanImage(page.id);
+  schedulePersist();
+  renderPages();
+  if (state.activeId === pageId) {
+    renderResult();
+    renderBrush();
+  }
+  setStatus(`Đã phục hồi ảnh gốc cho trang ${n}.`, false, true);
 }
 
 /* ---------------- Export ---------------- */
