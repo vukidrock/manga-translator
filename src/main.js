@@ -2743,21 +2743,56 @@ async function scrapeChapter(url) {
   return out;
 }
 
+// Tải ảnh bằng thẻ <img> (giống luồng tải ảnh của trình duyệt) rồi lấy ra blob.
+// Dùng crossOrigin=anonymous để canvas không bị "taint"; cần host cho CORS.
+function imgToBlob(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img, 0, 0);
+        c.toBlob((b) => (b && b.size > 32 ? resolve(b) : reject(new Error("Ảnh rỗng"))), "image/png");
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => reject(new Error("Không tải được ảnh"));
+    img.src = url;
+  });
+}
+
+async function fetchDirect(url) {
+  const res = await fetch(url, { mode: "cors", credentials: "omit" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  if (blob.size < 32) throw new Error("File rỗng");
+  return blob;
+}
+
+const weservUrl = (url) => `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+
 async function fetchImageBlob(url, useProxy) {
-  const direct = async (u) => {
-    const res = await fetch(u, { mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
-    if (blob.size < 32) throw new Error("File rỗng");
-    return blob;
-  };
-  try {
-    return await direct(url);
-  } catch (err) {
-    if (!useProxy) throw err;
-    const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ""))}`;
-    return await direct(proxied);
+  const strategies = [() => fetchDirect(url)];
+  if (useProxy) {
+    strategies.push(() => fetchDirect(weservUrl(url)), () => imgToBlob(weservUrl(url)));
   }
+  strategies.push(() => imgToBlob(url));
+  let lastErr = null;
+  for (const run of strategies) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await run();
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastErr || new Error("Không tải được ảnh");
 }
 
 function openUrlModal() {
@@ -2986,7 +3021,7 @@ async function addFromUrls() {
   const slots = new Array(images.length).fill(null);
   let cursor = 0;
   let done = 0;
-  const CONCURRENCY = 4;
+  const CONCURRENCY = 3;
   const worker = async () => {
     for (;;) {
       const i = cursor++;
