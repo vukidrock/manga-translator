@@ -23,8 +23,60 @@ const MIME = {
   ".onnx": "application/octet-stream",
 };
 
-const server = http.createServer((req, res) => {
-  const urlPath = decodeURIComponent(req.url.split("?")[0]);
+const server = http.createServer(async (req, res) => {
+  const parsed = new URL(req.url, `http://localhost:${PORT}`);
+  const urlPath = decodeURIComponent(parsed.pathname);
+
+  // Proxy ảnh: /proxy?url=<encoded> -> server tải hộ (tránh CORS/kiểm tra hotlink)
+  if (urlPath === "/proxy") {
+    const target = parsed.searchParams.get("url");
+    if (!target || !/^https?:\/\//i.test(target)) {
+      res.writeHead(400, { "content-type": "text/plain; charset=utf-8" }).end("URL không hợp lệ");
+      return;
+    }
+    try {
+      let origin = "";
+      try {
+        origin = new URL(target).origin + "/";
+      } catch {
+        /* ignore */
+      }
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 20000);
+      let upstream;
+      try {
+        upstream = await fetch(target, {
+          redirect: "follow",
+          signal: ctrl.signal,
+          headers: {
+            "user-agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+            accept: "image/avif,image/webp,image/*,*/*;q=0.8",
+            referer: origin,
+          },
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!upstream.ok) {
+        res.writeHead(upstream.status, { "access-control-allow-origin": "*" }).end(`Upstream ${upstream.status}`);
+        return;
+      }
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      res.writeHead(200, {
+        "content-type": upstream.headers.get("content-type") || "application/octet-stream",
+        "content-length": buf.length,
+        "cache-control": "public, max-age=3600",
+        "access-control-allow-origin": "*",
+        "cross-origin-resource-policy": "cross-origin",
+      });
+      res.end(buf);
+    } catch (err) {
+      res.writeHead(502, { "access-control-allow-origin": "*" }).end(`Proxy lỗi: ${err.message}`);
+    }
+    return;
+  }
+
   const rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
   const filePath = path.join(ROOT, rel);
 

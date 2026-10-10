@@ -2745,11 +2745,16 @@ async function scrapeChapter(url) {
 
 // Tải ảnh bằng thẻ <img> (giống luồng tải ảnh của trình duyệt) rồi lấy ra blob.
 // Dùng crossOrigin=anonymous để canvas không bị "taint"; cần host cho CORS.
-function imgToBlob(url) {
+function imgToBlob(url, timeoutMs = 25000) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const timer = setTimeout(() => reject(new Error("Hết thời gian tải ảnh")), timeoutMs);
+    const done = (fn) => (arg) => {
+      clearTimeout(timer);
+      fn(arg);
+    };
     img.crossOrigin = "anonymous";
-    img.onload = () => {
+    img.onload = done(() => {
       try {
         const c = document.createElement("canvas");
         c.width = img.naturalWidth;
@@ -2759,24 +2764,35 @@ function imgToBlob(url) {
       } catch (e) {
         reject(e);
       }
-    };
-    img.onerror = () => reject(new Error("Không tải được ảnh"));
+    });
+    img.onerror = done(() => reject(new Error("Không tải được ảnh")));
     img.src = url;
   });
 }
 
-async function fetchDirect(url) {
-  const res = await fetch(url, { mode: "cors", credentials: "omit" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const blob = await res.blob();
-  if (blob.size < 32) throw new Error("File rỗng");
-  return blob;
+async function fetchDirect(url, timeoutMs = 25000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { mode: "cors", credentials: "omit", signal: ctrl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    if (blob.size < 32) throw new Error("File rỗng");
+    return blob;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const weservUrl = (url) => `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+const localProxyUrl = (url) => `${location.origin}/proxy?url=${encodeURIComponent(url)}`;
 
 async function fetchImageBlob(url, useProxy) {
-  const strategies = [() => fetchDirect(url)];
+  const strategies = [];
+  const overHttp = location.protocol.startsWith("http");
+  // Ưu tiên proxy qua server local (same-origin, không dính CORS) khi chạy `npm run serve`.
+  if (overHttp) strategies.push(() => fetchDirect(localProxyUrl(url)));
+  strategies.push(() => fetchDirect(url));
   if (useProxy) {
     strategies.push(() => fetchDirect(weservUrl(url)), () => imgToBlob(weservUrl(url)));
   }
@@ -2788,7 +2804,7 @@ async function fetchImageBlob(url, useProxy) {
         return await run();
       } catch (err) {
         lastErr = err;
-        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+        await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
       }
     }
   }
