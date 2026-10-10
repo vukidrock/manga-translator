@@ -1291,14 +1291,13 @@ els.overlay.addEventListener("pointerdown", (e) => {
     const region = activePage().regions.find((r) => r.id === quadPoly.dataset.id);
     if (!region) return;
     if (region.id !== selectedId) select(region.id);
-    const now = performance.now();
-    if (lastClick.id === region.id && now - lastClick.t < 350) {
-      lastClick = { id: null, t: 0 };
-      zoomToRegion(region);
-      return;
-    }
-    lastClick = { id: region.id, t: now };
-    drag = { mode: "quadMove", region, start: toImageCoords(e), origQuad: region.quad.map((p) => [p[0], p[1]]) };
+    drag = {
+      mode: "quadMove",
+      region,
+      start: toImageCoords(e),
+      origQuad: region.quad.map((p) => [p[0], p[1]]),
+      moved: false,
+    };
     e.preventDefault();
     return;
   }
@@ -1317,14 +1316,6 @@ els.overlay.addEventListener("pointerdown", (e) => {
   const region = activePage().regions.find((r) => r.id === boxEl.dataset.id);
   if (!region) return;
   if (region.id !== selectedId) select(region.id);
-  // double-click thủ công (không phụ thuộc sự kiện dblclick)
-  const now = performance.now();
-  if (!handle && lastClick.id === region.id && now - lastClick.t < 350) {
-    lastClick = { id: null, t: 0 };
-    zoomToRegion(region);
-    return;
-  }
-  if (!handle) lastClick = { id: region.id, t: now };
   const liveBox = els.overlay.querySelector(`.box[data-id="${region.id}"]`);
   const dir = handle?.dataset.dir || "move";
   drag = {
@@ -1335,6 +1326,7 @@ els.overlay.addEventListener("pointerdown", (e) => {
     orig: { x: region.x, y: region.y, w: region.w, h: region.h, rot: region.rot || 0 },
     boxEl: liveBox,
     fillEl: els.overlay.querySelector(`[data-fill="${region.id}"]`),
+    moved: false,
   };
   e.preventDefault();
 });
@@ -1405,6 +1397,7 @@ window.addEventListener("pointermove", (e) => {
   if (drag.mode === "quadMove") {
     const dx = p.x - drag.start.x;
     const dy = p.y - drag.start.y;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) drag.moved = true;
     r.quad = drag.origQuad.map((q) => [Math.round(q[0] + dx), Math.round(q[1] + dy)]);
     syncQuadBbox(r);
     renderOverlay();
@@ -1424,6 +1417,7 @@ window.addEventListener("pointermove", (e) => {
 
   const dx = p.x - drag.start.x;
   const dy = p.y - drag.start.y;
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3 || drag.mode === "resize") drag.moved = true;
   if (drag.mode === "move") {
     r.x = Math.round(drag.orig.x + dx);
     r.y = Math.round(drag.orig.y + dy);
@@ -1471,7 +1465,20 @@ window.addEventListener("pointerup", () => {
     return;
   }
   if (drag) {
+    const d = drag;
     drag = null;
+    // Chỉ coi là double-click (zoom) khi bấm 2 lần mà KHÔNG di chuyển.
+    if (d.mode === "move" && !d.moved) {
+      const now = performance.now();
+      if (lastClick.id === d.region.id && now - lastClick.t < 350) {
+        lastClick = { id: null, t: 0 };
+        zoomToRegion(d.region);
+        return;
+      }
+      lastClick = { id: d.region.id, t: now };
+    } else {
+      lastClick = { id: null, t: 0 };
+    }
     renderOverlay();
     renderRegionsList();
     renderFields();
