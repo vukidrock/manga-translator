@@ -1271,7 +1271,7 @@ async function applyBrush() {
 }
 
 els.overlay.addEventListener("pointerdown", (e) => {
-  if (busy) return;
+  if (busy && !queueRunning) return;
   if (brushMode) {
     startStroke(e);
     e.preventDefault();
