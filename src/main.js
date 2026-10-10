@@ -104,6 +104,11 @@ const els = {
   urlCancel: $("urlCancel"),
   btnGlossary: $("btnGlossary"),
   btnAuto: $("btnAuto"),
+  btnAutoAll: $("btnAutoAll"),
+  queueInfo: $("queueInfo"),
+  queueText: $("queueText"),
+  qbarFill: $("qbarFill"),
+  queueStop: $("queueStop"),
   btnHelp: $("btnHelp"),
   helpModal: $("helpModal"),
   helpClose: $("helpClose"),
@@ -2161,11 +2166,25 @@ async function runTranslate(pageArg) {
   return runOfflineTranslate(pageArg);
 }
 
-// Tự động cả trang: Nhận diện → (OCR nếu Offline) → Dịch → Xoá chữ
+// Tự động 1 trang: Nhận diện → (OCR nếu Offline) → Dịch → Xoá chữ
+async function autoProcessPage(page) {
+  if (!page.regions.length) {
+    await runDetect(page);
+    if (!page.regions.length) return false;
+  }
+  const provider = state.settings.transProvider || "offline";
+  const active = page.regions.filter((r) => !r.style.keep);
+  const needOcr = provider !== "gemini" && active.some((r) => !(r.source || "").trim());
+  if (needOcr) await runOcr(page);
+  await runTranslate(page);
+  if (page.regions.some((r) => !r.style.keep)) await runInpaint(page);
+  return true;
+}
+
 let autoRunning = false;
 async function runAuto() {
   const page = activePage();
-  if (!page || autoRunning) return;
+  if (!page || autoRunning || queueRunning) return;
   if (!state.pages.length) {
     setStatus("Chưa có trang nào. Thêm ảnh trước.");
     return;
@@ -2173,26 +2192,105 @@ async function runAuto() {
   autoRunning = true;
   els.btnAuto.disabled = true;
   try {
-    if (!page.regions.length) {
-      await runDetect(page);
-      if (!page.regions.length) {
-        setStatus("Tự động: không phát hiện được vùng nào.");
-        return;
-      }
-    }
-    const provider = state.settings.transProvider || "offline";
-    const active = page.regions.filter((r) => !r.style.keep);
-    const needOcr = provider !== "gemini" && active.some((r) => !(r.source || "").trim());
-    if (needOcr) await runOcr(page);
-    await runTranslate(page);
-    if (page.regions.some((r) => !r.style.keep)) await runInpaint(page);
-    setStatus("Tự động xong: đã nhận diện, dịch và xoá chữ trang đã chọn.", false, true);
+    const ok = await autoProcessPage(page);
+    setStatus(ok ? "Tự động xong trang này." : "Tự động: không phát hiện được vùng nào.", ok);
   } catch (err) {
     console.error(err);
     setStatus(`Tự động lỗi: ${err.message}`);
   } finally {
     autoRunning = false;
     els.btnAuto.disabled = busy;
+    refreshIcons();
+  }
+}
+
+/* ---------------- Hàng đợi tự động nhiều trang ---------------- */
+let queue = [];
+let queueTotal = 0;
+let queueDone = 0;
+let queueRunning = false;
+let queueCancel = false;
+let queueCurrent = null;
+
+const pageNumber = (id) => state.pages.findIndex((p) => p.id === id) + 1;
+
+function updateQueueUI() {
+  const running = queueRunning && (queueCurrent || queue.length);
+  if (!running) {
+    els.queueInfo.classList.add("hidden");
+    return;
+  }
+  els.queueInfo.classList.remove("hidden");
+  const waiting = queue.map((id) => pageNumber(id)).filter((n) => n > 0);
+  const cur = queueCurrent ? pageNumber(queueCurrent.id) : 0;
+  els.queueText.textContent = `Tự động: trang ${cur} · ${queueDone}/${queueTotal}${
+    waiting.length ? ` · chờ: ${waiting.slice(0, 10).join(", ")}${waiting.length > 10 ? "…" : ""}` : ""
+  }`;
+  if (els.qbarFill) els.qbarFill.style.width = `${queueTotal ? Math.round((queueDone / queueTotal) * 100) : 0}%`;
+}
+
+function queueAutoPages(ids) {
+  const add = ids.filter(
+    (id) => !queue.includes(id) && (!queueCurrent || queueCurrent.id !== id) && state.pages.some((p) => p.id === id),
+  );
+  if (!add.length) return;
+  queue.push(...add);
+  if (queueRunning) {
+    queueTotal += add.length;
+    updateQueueUI();
+  } else {
+    runQueue();
+  }
+}
+function queueAutoAll() {
+  const ids = state.pages.filter((p) => pageStatus(p) !== "done").map((p) => p.id);
+  if (!ids.length) {
+    setStatus("Không có trang nào cần tự động (tất cả đã xong).");
+    return;
+  }
+  queueAutoPages(ids);
+}
+function cancelQueue() {
+  queueCancel = true;
+  queue = [];
+  setStatus("Đang dừng hàng đợi (trang đang chạy sẽ hoàn tất)…");
+  updateQueueUI();
+}
+async function runQueue() {
+  if (queueRunning || autoRunning || !queue.length) return;
+  queueRunning = true;
+  queueCancel = false;
+  queueDone = 0;
+  queueTotal = queue.length;
+  els.btnAuto.disabled = true;
+  els.btnAutoAll.disabled = true;
+  try {
+    while (queue.length && !queueCancel) {
+      const id = queue.shift();
+      const page = state.pages.find((p) => p.id === id);
+      if (!page) continue;
+      queueCurrent = page;
+      updateQueueUI();
+      try {
+        await autoProcessPage(page);
+      } catch (err) {
+        console.error(err);
+      }
+      queueDone++;
+      updateQueueUI();
+    }
+    setStatus(
+      queueCancel ? "Đã dừng hàng đợi." : `Tự động cả bộ xong ${queueDone}/${queueTotal} trang.`,
+      false,
+      true,
+    );
+  } finally {
+    queueRunning = false;
+    queueCurrent = null;
+    queueCancel = false;
+    els.btnAuto.disabled = busy;
+    els.btnAutoAll.disabled = false;
+    setTimeout(() => updateQueueUI(), 4000);
     refreshIcons();
   }
 }
@@ -3082,6 +3180,8 @@ function wire() {
 
   els.btnGlossary.addEventListener("click", openGlossary);
   els.btnAuto.addEventListener("click", runAuto);
+  els.btnAutoAll.addEventListener("click", queueAutoAll);
+  els.queueStop.addEventListener("click", cancelQueue);
   els.btnHelp.addEventListener("click", openHelp);
   els.helpClose.addEventListener("click", closeHelp);
   els.glossaryClose.addEventListener("click", closeGlossary);

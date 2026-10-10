@@ -384,6 +384,14 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .dot.partial { background: #d97706; }
 .dot.done { background: #16a34a; }
 .statusbar #pageInfo { margin-left: 14px; }
+.queue-info { display: inline-flex; align-items: center; gap: 8px; color: var(--text); }
+.queue-info.hidden { display: none; }
+.queue-info .qbar {
+  width: 90px; height: 6px; border-radius: 4px; background: var(--panel-2); overflow: hidden; display: inline-block;
+}
+.queue-info .qbar > i { display: block; height: 100%; width: 0; background: var(--accent-2); transition: width .2s; }
+.queue-info button { padding: 1px 8px; font-size: 11px; }
+.queue-info .spinner { margin-right: 0; }
 .statusbar .version { margin-left: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .menu-version { padding: 6px 10px; margin-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 

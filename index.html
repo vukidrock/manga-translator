@@ -70,6 +70,9 @@
   </header>
 
   <div class="menu hidden" id="topMenu">
+    <div class="menu-group-label"><i data-lucide="zap"></i>Tự động</div>
+    <button id="btnAutoAll"><i data-lucide="list-checks"></i>Tự động cả bộ (hàng đợi)</button>
+    <div class="menu-sep"></div>
     <div class="menu-group-label"><i data-lucide="book-open"></i>Trang &amp; dự án</div>
     <button id="btnUndo">Hoàn tác</button>
     <button id="btnRedo">Làm lại</button>
@@ -209,6 +212,12 @@
 
   <div class="statusbar">
     <span id="status">Sẵn sàng</span>
+    <span id="queueInfo" class="queue-info hidden">
+      <span class="spinner"></span>
+      <span id="queueText"></span>
+      <span class="qbar"><i id="qbarFill"></i></span>
+      <button id="queueStop" title="Dừng hàng đợi (trang đang chạy sẽ hoàn tất)">Dừng</button>
+    </span>
     <div class="legend" title="Màu số trang trong cột Trang">
       <span class="legend-item"><i class="dot empty"></i>Chưa nhận diện</span>
       <span class="legend-item"><i class="dot none"></i>Chưa dịch</span>
