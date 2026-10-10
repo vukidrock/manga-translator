@@ -2981,11 +2981,21 @@ function newProject() {
       : "Tạo project mới? (Project hiện tại đã xuất, vẫn có thể Mở lại sau.)";
     if (!confirm(msg)) return;
   }
+  const hasMemory = (state.glossary || []).length || (state.tm || []).length;
+  const keepMemory = hasMemory
+    ? confirm(
+        "Giữ lại Bảng thuật ngữ & Bộ nhớ dịch (TM) cho project mới?\n\nOK = giữ lại · Cancel = bắt đầu sạch.",
+      )
+    : false;
+  const carryGlossary = keepMemory ? structuredClone(state.glossary || []) : [];
+  const carryTm = keepMemory ? structuredClone(state.tm || []) : [];
   for (const p of state.pages) {
     dropPageImage(p.id);
     dropCleanImage(p.id);
   }
   state = createState();
+  state.glossary = carryGlossary;
+  state.tm = carryTm;
   selectedId = null;
   els.projectName.value = "";
   els.threshold.value = state.settings.threshold ?? 0.4;
