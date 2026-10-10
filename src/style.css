@@ -168,6 +168,12 @@ select.compact { max-width: 110px; padding: 6px 6px; }
 }
 .toolbar .group:first-of-type::before { display: none; }
 .toolbar .group.right { margin-left: auto; }
+.toolbar .auto-group {
+  padding: 3px; border-radius: 9px; background: rgba(59, 130, 246, 0.14);
+}
+.toolbar .manual-group {
+  padding: 3px 6px; border-radius: 9px; background: var(--panel-2);
+}
 .toolbar .inline { display: flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; }
 
 .layout {

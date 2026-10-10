@@ -33,11 +33,14 @@
     <div class="group">
       <button id="btnAddImages" class="primary" title="Thêm một hoặc nhiều ảnh trang truyện"><i data-lucide="image-plus"></i>Ảnh</button>
       <button id="btnAddUrl" title="Dán URL ảnh hoặc URL trang chương"><i data-lucide="link"></i>URL</button>
-      <button id="btnDetect" title="Phát hiện bong bóng và ô chữ bằng model"><i data-lucide="scan-search"></i>Nhận diện</button>
+    </div>
+
+    <div class="group auto-group">
       <button id="btnAuto" class="primary" title="Tự động cả trang: Nhận diện → OCR → Dịch → Xoá chữ"><i data-lucide="zap"></i>Tự động</button>
     </div>
 
-    <div class="group">
+    <div class="group manual-group">
+      <button id="btnDetect" title="Phát hiện bong bóng và ô chữ bằng model"><i data-lucide="scan-search"></i>Nhận diện</button>
       <select id="ocrLang" class="compact" title="Ngôn ngữ gốc của truyện (cho OCR)">
         <option value="jpn">日本語 · Nhật</option>
         <option value="chi_sim">中文 (giản thể)</option>
@@ -52,9 +55,6 @@
         <option value="vi-en">Việt → Anh</option>
       </select>
       <button id="btnTranslate" title="Gợi ý bản dịch cho các vùng đã có nguyên văn (OCR)"><i data-lucide="languages"></i>Dịch</button>
-    </div>
-
-    <div class="group">
       <button id="btnAddRegion" title="Vẽ thêm một vùng dịch thủ công"><i data-lucide="square-dashed"></i>Vùng</button>
       <button id="btnBrush" title="Cọ tẩy: tô lên vùng cần xoá/tái tạo (ảnh gốc)"><i data-lucide="brush"></i>Cọ tẩy</button>
       <button id="btnInpaint" title="Dùng AI (LaMa) xoá chữ gốc và tái tạo nền, giữ nét vẽ"><i data-lucide="wand-sparkles"></i>Xoá chữ AI</button>
