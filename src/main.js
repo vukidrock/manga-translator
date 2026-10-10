@@ -3223,9 +3223,9 @@ function wire() {
     if (els.helpModal && !els.helpModal.classList.contains("hidden")) closeHelp();
     els.topMenu.classList.add("hidden");
   });
-  $("btnDetect").addEventListener("click", runDetect);
-  $("btnOcr").addEventListener("click", runOcr);
-  $("btnInpaint").addEventListener("click", runInpaint);
+  $("btnDetect").addEventListener("click", () => runDetect());
+  $("btnOcr").addEventListener("click", () => runOcr());
+  $("btnInpaint").addEventListener("click", () => runInpaint());
   $("btnInpaintUndo").addEventListener("click", undoInpaint);
   $("btnBrush").addEventListener("click", () => setBrushMode(!brushMode));
   els.brushDone.addEventListener("click", () => setBrushMode(false));
@@ -3245,7 +3245,7 @@ function wire() {
       schedulePersist();
     }
   });
-  $("btnTranslate").addEventListener("click", runTranslate);
+  $("btnTranslate").addEventListener("click", () => runTranslate());
   $("btnSave").addEventListener("click", saveProject);
   $("btnNewProject").addEventListener("click", newProject);
   $("btnUndo").addEventListener("click", undo);
