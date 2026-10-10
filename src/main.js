@@ -102,6 +102,16 @@ const els = {
   urlFetch: $("urlFetch"),
   urlExtract: $("urlExtract"),
   urlCancel: $("urlCancel"),
+  btnGlossary: $("btnGlossary"),
+  glossaryModal: $("glossaryModal"),
+  glossaryRows: $("glossaryRows"),
+  glossaryAdd: $("glossaryAdd"),
+  glossaryClose: $("glossaryClose"),
+  glossaryImport: $("glossaryImport"),
+  glossaryPaste: $("glossaryPaste"),
+  glossaryStatus: $("glossaryStatus"),
+  glossaryTmInfo: $("glossaryTmInfo"),
+  glossaryClearTm: $("glossaryClearTm"),
 };
 
 function refreshIcons() {
@@ -534,6 +544,8 @@ function cloneModel(s) {
     name: s.name,
     activeId: s.activeId,
     settings: structuredClone(s.settings),
+    glossary: structuredClone(s.glossary || []),
+    tm: structuredClone(s.tm || []),
     pages: s.pages.map((p) => ({
       id: p.id,
       name: p.name,
@@ -587,6 +599,8 @@ function applySnapshot(snap) {
   state.name = snap.name;
   state.activeId = snap.activeId;
   state.settings = structuredClone(snap.settings);
+  state.glossary = structuredClone(snap.glossary || []);
+  state.tm = structuredClone(snap.tm || []);
   state.pages = snap.pages.map((p) => ({ ...p, thumb: oldThumbs.get(p.id) || null, regions: structuredClone(p.regions) }));
   els.projectName.value = state.name || "";
   if (!state.pages.some((p) => p.id === selectedId)) selectedId = null;
@@ -2074,6 +2088,43 @@ async function runOcr() {
 
 /* ---------------- Dịch: offline (Transformers.js) hoặc Gemini ---------------- */
 
+/* ---------------- Glossary & Translation Memory ---------------- */
+const normSeg = (s) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
+function tmLookup(src) {
+  const k = normSeg(src);
+  if (!k) return null;
+  const hit = (state.tm || []).find((e) => normSeg(e.src) === k);
+  return hit ? hit.dst : null;
+}
+function tmRemember(src, dst) {
+  src = (src || "").trim();
+  dst = (dst || "").trim();
+  if (!src || !dst) return;
+  const k = normSeg(src);
+  const ex = (state.tm || []).find((e) => normSeg(e.src) === k);
+  if (ex) {
+    if (ex.dst !== dst) ex.dst = dst;
+    return;
+  }
+  state.tm.push({ src, dst });
+  if (state.tm.length > 3000) state.tm.shift();
+}
+// Điền sẵn từ TM cho vùng có nguyên văn nhưng chưa dịch; trả về số vùng đã điền.
+function prefillFromTM(page) {
+  let n = 0;
+  for (const r of page.regions) {
+    if (r.style.keep || (r.text || "").trim()) continue;
+    const src = (r.source || "").trim();
+    if (!src) continue;
+    const t = tmLookup(src);
+    if (t) {
+      r.text = t;
+      n++;
+    }
+  }
+  return n;
+}
+
 async function runTranslate() {
   const provider = state.settings.transProvider || "offline";
   if (provider === "gemini") return runGeminiTranslate();
@@ -2084,11 +2135,16 @@ async function runOfflineTranslate() {
   const page = activePage();
   if (!page || busy) return;
   const dir = els.transDir.value;
+  prefillFromTM(page);
   const targets = page.regions.filter(
     (r) => (r.source || "").trim() && !(r.text || "").trim() && !r.style.keep,
   );
   if (!targets.length) {
-    setStatus("Không có vùng nào cần dịch (cần OCR nguyên văn trước, hoặc mọi vùng đã có bản dịch).");
+    renderOverlay();
+    renderRegionsList();
+    renderFields();
+    schedulePersist();
+    setStatus("Không có vùng nào cần dịch (cần OCR nguyên văn trước, hoặc đã khớp TM/mọi vùng đã dịch).");
     return;
   }
   setBusy(true);
@@ -2100,7 +2156,10 @@ async function runOfflineTranslate() {
     );
     targets.forEach((r, i) => {
       const t = out[i] || "";
-      if (t) r.text = t;
+      if (t) {
+        r.text = t;
+        tmRemember(r.source, t);
+      }
     });
     renderOverlay();
     renderRegionsList();
@@ -2215,9 +2274,14 @@ async function runGeminiTranslate() {
     setStatus("Chưa có vùng nào. Bấm “Nhận diện” trước.");
     return;
   }
+  prefillFromTM(page);
   const targets = page.regions.filter((r) => !r.style.keep && !(r.text || "").trim());
   if (!targets.length) {
-    setStatus("Mọi vùng đã có bản dịch.");
+    renderOverlay();
+    renderRegionsList();
+    renderFields();
+    schedulePersist();
+    setStatus("Mọi vùng đã có bản dịch (kể cả khớp từ TM).");
     return;
   }
   setBusy(true);
@@ -2233,6 +2297,7 @@ async function runGeminiTranslate() {
       srcLang: dir.startsWith("en") ? "English" : dir.startsWith("vi") ? "Vietnamese" : "auto",
       targetLang: dir.endsWith("vi") ? "Vietnamese" : "English",
       context: state.name || "",
+      glossary: state.glossary || [],
     };
     const modelOrder = [
       els.geminiModel.value,
@@ -2251,6 +2316,7 @@ async function runGeminiTranslate() {
       if (src && !(r.source || "").trim()) r.source = src;
       if (vi) {
         r.text = vi;
+        if (r.source) tmRemember(r.source, vi);
         n++;
       }
     });
@@ -2534,6 +2600,76 @@ function closeUrlModal() {
   els.urlModal.classList.add("hidden");
 }
 
+/* ---------------- Bảng thuật ngữ & TM ---------------- */
+function renderGlossary() {
+  const rows = els.glossaryRows;
+  if (!rows) return;
+  if (!state.glossary) state.glossary = [];
+  rows.innerHTML = "";
+  state.glossary.forEach((g, i) => {
+    const row = document.createElement("div");
+    row.className = "glossary-row";
+    const src = document.createElement("input");
+    src.value = g.src || "";
+    src.placeholder = "Nguồn (gốc)";
+    const dst = document.createElement("input");
+    dst.value = g.dst || "";
+    dst.placeholder = "Bản dịch";
+    const note = document.createElement("input");
+    note.value = g.note || "";
+    note.placeholder = "Ghi chú";
+    const del = document.createElement("button");
+    del.className = "danger";
+    del.textContent = "×";
+    del.title = "Xoá dòng";
+    src.addEventListener("input", () => {
+      g.src = src.value;
+      persistSoon();
+    });
+    dst.addEventListener("input", () => {
+      g.dst = dst.value;
+      persistSoon();
+    });
+    note.addEventListener("input", () => {
+      g.note = note.value;
+      persistSoon();
+    });
+    del.addEventListener("click", () => {
+      state.glossary.splice(i, 1);
+      renderGlossary();
+      schedulePersist();
+    });
+    row.append(src, dst, note, del);
+    rows.appendChild(row);
+  });
+  if (els.glossaryTmInfo) els.glossaryTmInfo.textContent = `TM: ${(state.tm || []).length} cặp câu`;
+}
+function openGlossary() {
+  renderGlossary();
+  els.glossaryStatus.textContent = "";
+  els.glossaryModal.classList.remove("hidden");
+}
+function closeGlossary() {
+  els.glossaryModal.classList.add("hidden");
+}
+function importGlossaryText(text) {
+  if (!state.glossary) state.glossary = [];
+  let n = 0;
+  for (const line of String(text).split(/\r?\n/)) {
+    const parts = line.split(/->|\t/);
+    if (parts.length < 2) continue;
+    const src = parts[0].trim();
+    const dst = parts[1].trim();
+    const note = (parts[2] || "").trim();
+    if (!src || !dst) continue;
+    state.glossary.push({ src, dst, note });
+    n++;
+  }
+  renderGlossary();
+  schedulePersist();
+  return n;
+}
+
 function persistJinaKey() {
   const key = (els.urlJinaKey.value || "").trim();
   if (!key) return;
@@ -2802,12 +2938,37 @@ function wire() {
   els.urlCancel.addEventListener("click", closeUrlModal);
   els.urlFetch.addEventListener("click", addFromUrls);
   els.urlExtract.addEventListener("click", extractImageUrls);
+
+  els.btnGlossary.addEventListener("click", openGlossary);
+  els.glossaryClose.addEventListener("click", closeGlossary);
+  els.glossaryAdd.addEventListener("click", () => {
+    if (!state.glossary) state.glossary = [];
+    state.glossary.push({ src: "", dst: "", note: "" });
+    renderGlossary();
+    const last = els.glossaryRows.lastElementChild?.querySelector("input");
+    last?.focus();
+    schedulePersist();
+  });
+  els.glossaryImport.addEventListener("click", () => {
+    const n = importGlossaryText(els.glossaryPaste.value);
+    els.glossaryStatus.textContent = `Đã nhập ${n} dòng.`;
+    els.glossaryPaste.value = "";
+  });
+  els.glossaryClearTm.addEventListener("click", () => {
+    if (!(state.tm || []).length) return;
+    if (!confirm("Xoá toàn bộ bộ nhớ dịch (TM)?")) return;
+    state.tm = [];
+    renderGlossary();
+    schedulePersist();
+    setStatus("Đã xoá TM.", false, true);
+  });
   els.urlModal.addEventListener("click", (e) => {
     if (e.target === els.urlModal) closeUrlModal();
   });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!els.urlModal.classList.contains("hidden")) closeUrlModal();
+    if (els.glossaryModal && !els.glossaryModal.classList.contains("hidden")) closeGlossary();
     els.topMenu.classList.add("hidden");
   });
   $("btnDetect").addEventListener("click", runDetect);

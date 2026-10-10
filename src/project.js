@@ -12,6 +12,8 @@ export function createState() {
     name: "",
     pages: [],
     activeId: null,
+    glossary: [],
+    tm: [],
     settings: { ocrLang: "jpn", ocrMode: "region", threshold: 0.4, transDir: "en-vi", transProvider: "offline", geminiModel: "gemini-3.1-flash-lite", geminiLimits: { rpm: 15, tpm: 250000, rpd: 500 }, style: defaultStyle(24) },
     display: { scale: 1, fit: true, showBoxes: true, compare: false },
   };
@@ -69,7 +71,7 @@ export async function persist(state) {
           regions: page.regions,
         });
       }
-      meta.put({ name: state.name || "", order: state.pages.map((p) => p.id), activeId: state.activeId, settings: state.settings }, "state");
+      meta.put({ name: state.name || "", order: state.pages.map((p) => p.id), activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [] }, "state");
     };
     t.oncomplete = () => resolve();
     t.onerror = () => reject(t.error);
@@ -86,7 +88,8 @@ export async function restore() {
   } catch {
     meta = null;
   }
-  if (!pages.length) return null;
+  const hasGlossary = (meta?.glossary || []).length || (meta?.tm || []).length || !!meta?.name;
+  if (!pages.length && !hasGlossary) return null;
   const state = createState();
   const byId = new Map(pages.map((p) => [p.id, p]));
   const order = meta?.order || pages.map((p) => p.id);
@@ -95,8 +98,10 @@ export async function restore() {
   state.pages.forEach((p) => {
     p.regions = p.regions || [];
   });
-  state.activeId = meta?.activeId && byId.has(meta.activeId) ? meta.activeId : state.pages[0].id;
+  state.activeId = meta?.activeId && byId.has(meta.activeId) ? meta.activeId : state.pages[0]?.id || null;
   state.name = meta?.name || "";
+  state.glossary = meta?.glossary || [];
+  state.tm = meta?.tm || [];
   if (meta?.settings) Object.assign(state.settings, meta.settings);
   return state;
 }
@@ -158,7 +163,7 @@ export async function exportProject(state) {
   }
   zip.file(
     "project.json",
-    JSON.stringify({ version: 1, app: "manga-translator", name: state.name || "", activeId: state.activeId, settings: state.settings, pages }, null, 2),
+    JSON.stringify({ version: 1, app: "manga-translator", name: state.name || "", activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], pages }, null, 2),
   );
   return zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
 }
@@ -170,6 +175,8 @@ export async function importProject(file) {
   const data = JSON.parse(await metaFile.async("string"));
   const state = createState();
   state.name = data.name || "";
+  state.glossary = data.glossary || [];
+  state.tm = data.tm || [];
   Object.assign(state.settings, data.settings || {});
   for (const p of data.pages || []) {
     const imgEntry = zip.file(p.imageFile);

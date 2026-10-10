@@ -11,15 +11,20 @@ export async function listGeminiModels(apiKey) {
     .filter((m) => m.id);
 }
 
-export async function geminiTranslatePage({ apiKey, model, imageDataUrl, count, srcLang = "auto", targetLang = "Vietnamese", context = "" }) {
+export async function geminiTranslatePage({ apiKey, model, imageDataUrl, count, srcLang = "auto", targetLang = "Vietnamese", context = "", glossary = [] }) {
   const base64 = imageDataUrl.split(",")[1];
   const mime = /data:(.*?);/.exec(imageDataUrl)?.[1] || "image/jpeg";
+  const gloss = (glossary || [])
+    .filter((g) => g && g.src && g.dst)
+    .map((g) => `${g.src} => ${g.dst}`)
+    .join("\n");
   const prompt = [
     "You are a professional manga/comic translator.",
     `The image is a comic page. Red numbered boxes mark the text regions (numbers 1..${count}).`,
     `For EACH number, read the ORIGINAL text inside that box, then translate it into natural, colloquial ${targetLang}.`,
     srcLang && srcLang !== "auto" ? `The source language is ${srcLang}.` : "",
     context ? `Context/series: ${context}` : "",
+    gloss ? `Glossary — use these EXACT translations when the term appears:\n${gloss}` : "",
     "Return ONLY minified JSON, no markdown, of the form:",
     '{"1":{"src":"original text","vi":"translated text"}, ...}',
     "Omit any box you cannot read. Do not add comments. Keep the original punctuation style.",

@@ -115,6 +115,7 @@
       <label title="Requests/ngày">RPD<input type="number" id="limRpd" min="1" step="1" /></label>
     </div>
     <div class="menu-inline" id="geminiCountdown" style="display:none;color:var(--danger)"></div>
+    <button id="btnGlossary"><i data-lucide="book-a"></i>Bảng thuật ngữ…</button>
     <div class="menu-sep"></div>
     <div class="menu-group-label"><i data-lucide="palette"></i>Giao diện</div>
     <button id="btnTheme">Nền tối</button>
@@ -246,6 +247,29 @@
         <button id="urlExtract" title="Chỉ trích danh sách URL ảnh, không tải về">Lấy URL ảnh</button>
         <button id="urlFetch" class="primary">Tải ảnh</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="glossaryModal">
+    <div class="modal-box">
+      <div class="modal-title">Bảng thuật ngữ (glossary)</div>
+      <p class="muted">
+        Giữ nhất quán tên riêng/thuật ngữ — được gửi kèm khi dịch bằng Gemini.
+        Dịch offline dùng TM (bộ nhớ câu) tự động cho các câu đã dịch trước đó.
+      </p>
+      <div id="glossaryRows" class="glossary-rows"></div>
+      <div class="modal-actions">
+        <button id="glossaryAdd">+ Dòng</button>
+        <span id="glossaryTmInfo" class="muted" style="margin-left:auto;margin-right:8px"></span>
+        <button id="glossaryClearTm" title="Xoá toàn bộ bộ nhớ dịch (TM)">Xoá TM</button>
+        <button id="glossaryClose" class="primary">Đóng</button>
+      </div>
+      <details class="gloss-paste">
+        <summary>Dán nhanh nhiều dòng (nguồn -&gt; đích)</summary>
+        <textarea id="glossaryPaste" spellcheck="false" placeholder="岩田 -> Iwata&#10;先輩 -> senpai"></textarea>
+        <div class="modal-actions"><button id="glossaryImport">Nhập vào bảng</button></div>
+      </details>
+      <div id="glossaryStatus" class="modal-status"></div>
     </div>
   </div>
 

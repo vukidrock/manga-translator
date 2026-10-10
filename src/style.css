@@ -405,6 +405,13 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .modal-key span { color: var(--muted); font-size: 11px; }
 .modal-key input { width: 100%; }
 .modal-status { min-height: 16px; font-size: 12px; color: var(--muted); white-space: pre-wrap; }
+.glossary-rows { max-height: 42vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.glossary-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 6px; }
+.glossary-row input { width: 100%; }
+.glossary-row button { padding: 4px 9px; }
+.gloss-paste { margin-top: 4px; }
+.gloss-paste > summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.gloss-paste textarea { min-height: 90px; margin-top: 6px; }
 .modal-status.error { color: var(--danger); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
