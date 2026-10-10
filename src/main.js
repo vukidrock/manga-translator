@@ -1780,6 +1780,7 @@ function renderFields() {
 
   on("#fldText", "input", (e) => {
     r.text = e.target.value;
+    tmRememberSoon(r.source, r.text);
     renderOverlay();
     renderRegionsList();
     updatePageInfo();
@@ -1788,6 +1789,7 @@ function renderFields() {
   });
   on("#fldSource", "input", (e) => {
     r.source = e.target.value;
+    tmRememberSoon(r.source, r.text);
     persistSoon();
   });
   on("#btnUseSource", "click", () => {
@@ -2119,6 +2121,22 @@ function tmRemember(src, dst) {
   }
   state.tm.push({ src, dst });
   if (state.tm.length > 3000) state.tm.shift();
+}
+// Cập nhật TM khi người dùng sửa tay (gộp sau khi ngừng gõ để tránh lưu câu dở).
+let tmPending = null;
+const flushTm = debounce(() => {
+  if (!tmPending) return;
+  const { src, dst } = tmPending;
+  tmPending = null;
+  tmRemember(src, dst);
+  schedulePersist();
+}, 900);
+function tmRememberSoon(src, dst) {
+  src = (src || "").trim();
+  dst = (dst || "").trim();
+  if (!src || !dst) return;
+  tmPending = { src, dst };
+  flushTm();
 }
 // Điền sẵn từ TM cho vùng có nguyên văn nhưng chưa dịch; trả về số vùng đã điền.
 function prefillFromTM(page) {
