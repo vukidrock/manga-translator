@@ -114,8 +114,15 @@ const els = {
   glossaryImport: $("glossaryImport"),
   glossaryPaste: $("glossaryPaste"),
   glossaryStatus: $("glossaryStatus"),
-  glossaryTmInfo: $("glossaryTmInfo"),
-  glossaryClearTm: $("glossaryClearTm"),
+  tabBtnGlossary: $("tabBtnGlossary"),
+  tabBtnTm: $("tabBtnTm"),
+  tabGlossary: $("tabGlossary"),
+  tabTm: $("tabTm"),
+  tmEnabled: $("tmEnabled"),
+  tmSearch: $("tmSearch"),
+  tmList: $("tmList"),
+  tmCount: $("tmCount"),
+  tmClear: $("tmClear"),
 };
 
 function refreshIcons() {
@@ -2115,6 +2122,7 @@ function tmRemember(src, dst) {
 }
 // Điền sẵn từ TM cho vùng có nguyên văn nhưng chưa dịch; trả về số vùng đã điền.
 function prefillFromTM(page) {
+  if (state.settings.useTM === false) return 0;
   let n = 0;
   for (const r of page.regions) {
     if (r.style.keep || (r.text || "").trim()) continue;
@@ -2689,12 +2697,70 @@ function renderGlossary() {
     row.append(src, dst, note, del);
     rows.appendChild(row);
   });
-  if (els.glossaryTmInfo) els.glossaryTmInfo.textContent = `TM: ${(state.tm || []).length} cặp câu`;
+}
+function renderTM() {
+  if (!els.tmList) return;
+  const q = normSeg(els.tmSearch ? els.tmSearch.value : "");
+  const all = state.tm || [];
+  const list = q ? all.filter((e) => normSeg(e.src).includes(q) || normSeg(e.dst).includes(q)) : all.slice();
+  const MAX = 300;
+  const shown = list.slice().reverse().slice(0, MAX);
+  els.tmList.innerHTML = "";
+  if (els.tmCount) els.tmCount.textContent = `${list.length} cặp`;
+  if (!shown.length) {
+    els.tmList.innerHTML = '<p class="muted" style="padding:6px">Chưa có câu nào trong TM.</p>';
+    return;
+  }
+  shown.forEach((entry) => {
+    const idx = all.indexOf(entry);
+    const row = document.createElement("div");
+    row.className = "tm-row";
+    const src = document.createElement("input");
+    src.value = entry.src || "";
+    const dst = document.createElement("input");
+    dst.value = entry.dst || "";
+    const del = document.createElement("button");
+    del.className = "danger";
+    del.textContent = "×";
+    del.title = "Xoá cặp này";
+    src.addEventListener("input", () => {
+      entry.src = src.value;
+      persistSoon();
+    });
+    dst.addEventListener("input", () => {
+      entry.dst = dst.value;
+      persistSoon();
+    });
+    del.addEventListener("click", () => {
+      state.tm.splice(idx, 1);
+      renderTM();
+      schedulePersist();
+    });
+    row.append(src, dst, del);
+    els.tmList.appendChild(row);
+  });
+  if (list.length > MAX) {
+    const more = document.createElement("p");
+    more.className = "muted";
+    more.style.padding = "4px 6px";
+    more.textContent = `… và ${list.length - MAX} cặp nữa (dùng ô tìm để lọc)`;
+    els.tmList.appendChild(more);
+  }
+}
+function setGlossaryTab(tab) {
+  const g = tab === "glossary";
+  els.tabBtnGlossary.classList.toggle("active", g);
+  els.tabBtnTm.classList.toggle("active", !g);
+  els.tabGlossary.classList.toggle("hidden", !g);
+  els.tabTm.classList.toggle("hidden", g);
+  if (!g) renderTM();
 }
 function openGlossary() {
   renderGlossary();
+  if (els.tmEnabled) els.tmEnabled.checked = state.settings.useTM !== false;
   els.glossaryStatus.textContent = "";
   els.glossaryModal.classList.remove("hidden");
+  setGlossaryTab("glossary");
 }
 function closeGlossary() {
   els.glossaryModal.classList.add("hidden");
@@ -3004,11 +3070,18 @@ function wire() {
     els.glossaryStatus.textContent = `Đã nhập ${n} dòng.`;
     els.glossaryPaste.value = "";
   });
-  els.glossaryClearTm.addEventListener("click", () => {
+  els.tabBtnGlossary.addEventListener("click", () => setGlossaryTab("glossary"));
+  els.tabBtnTm.addEventListener("click", () => setGlossaryTab("tm"));
+  els.tmSearch.addEventListener("input", () => renderTM());
+  els.tmEnabled.addEventListener("change", () => {
+    state.settings.useTM = els.tmEnabled.checked;
+    persistSoon();
+  });
+  els.tmClear.addEventListener("click", () => {
     if (!(state.tm || []).length) return;
     if (!confirm("Xoá toàn bộ bộ nhớ dịch (TM)?")) return;
     state.tm = [];
-    renderGlossary();
+    renderTM();
     schedulePersist();
     setStatus("Đã xoá TM.", false, true);
   });

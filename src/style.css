@@ -421,6 +421,21 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .help-body { max-height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .modal-box .steps { display: block; text-align: left; margin: 6px 0 10px; padding-left: 22px; line-height: 1.9; color: var(--text); font-size: 13px; }
 .modal-box .steps b { color: var(--accent-2); }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs .tab {
+  background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+  padding: 7px 10px; color: var(--muted);
+}
+.tabs .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.tab-pane { display: flex; flex-direction: column; gap: 10px; }
+.tab-pane.hidden { display: none; }
+.tm-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tm-controls .inline { display: flex; align-items: center; gap: 5px; color: var(--text); }
+.tm-controls #tmSearch { flex: 1; min-width: 120px; }
+.tm-list { max-height: 44vh; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.tm-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; }
+.tm-row input { width: 100%; }
 .modal-status.error { color: var(--danger); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 

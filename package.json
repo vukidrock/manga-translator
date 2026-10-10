@@ -1,6 +1,6 @@
 {
   "name": "manga-translator",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "Trình dịch manga chạy hoàn toàn trong trình duyệt: phát hiện bong bóng/ô chữ, OCR, gõ lại bản dịch và xuất ảnh.",
