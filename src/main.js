@@ -103,6 +103,10 @@ const els = {
   urlExtract: $("urlExtract"),
   urlCancel: $("urlCancel"),
   btnGlossary: $("btnGlossary"),
+  btnAuto: $("btnAuto"),
+  btnHelp: $("btnHelp"),
+  helpModal: $("helpModal"),
+  helpClose: $("helpClose"),
   glossaryModal: $("glossaryModal"),
   glossaryRows: $("glossaryRows"),
   glossaryAdd: $("glossaryAdd"),
@@ -525,7 +529,7 @@ function setStatus(msg, spinner = false, ok = false) {
 
 function setBusy(v) {
   busy = v;
-  for (const id of ["btnDetect", "btnOcr", "btnTranslate", "btnInpaint", "btnExportZip", "btnAddImages", "btnOpen"]) {
+  for (const id of ["btnDetect", "btnAuto", "btnOcr", "btnTranslate", "btnInpaint", "btnExportZip", "btnAddImages", "btnOpen"]) {
     const b = $(id);
     if (b) b.disabled = v;
   }
@@ -2131,6 +2135,49 @@ async function runTranslate() {
   return runOfflineTranslate();
 }
 
+// Tự động cả trang: Nhận diện → (OCR nếu Offline) → Dịch → Xoá chữ
+let autoRunning = false;
+async function runAuto() {
+  const page = activePage();
+  if (!page || autoRunning) return;
+  if (!state.pages.length) {
+    setStatus("Chưa có trang nào. Thêm ảnh trước.");
+    return;
+  }
+  autoRunning = true;
+  els.btnAuto.disabled = true;
+  try {
+    if (!page.regions.length) {
+      await runDetect();
+      if (!activePage() || !activePage().regions.length) {
+        setStatus("Tự động: không phát hiện được vùng nào.");
+        return;
+      }
+    }
+    const provider = state.settings.transProvider || "offline";
+    const active = page.regions.filter((r) => !r.style.keep);
+    const needOcr = provider !== "gemini" && active.some((r) => !(r.source || "").trim());
+    if (needOcr) await runOcr();
+    await runTranslate();
+    if (page.regions.some((r) => !r.style.keep)) await runInpaint();
+    setStatus("Tự động xong: đã nhận diện, dịch và xoá chữ trang này.", false, true);
+  } catch (err) {
+    console.error(err);
+    setStatus(`Tự động lỗi: ${err.message}`);
+  } finally {
+    autoRunning = false;
+    els.btnAuto.disabled = busy;
+    refreshIcons();
+  }
+}
+
+function openHelp() {
+  els.helpModal.classList.remove("hidden");
+}
+function closeHelp() {
+  els.helpModal.classList.add("hidden");
+}
+
 async function runOfflineTranslate() {
   const page = activePage();
   if (!page || busy) return;
@@ -2940,6 +2987,9 @@ function wire() {
   els.urlExtract.addEventListener("click", extractImageUrls);
 
   els.btnGlossary.addEventListener("click", openGlossary);
+  els.btnAuto.addEventListener("click", runAuto);
+  els.btnHelp.addEventListener("click", openHelp);
+  els.helpClose.addEventListener("click", closeHelp);
   els.glossaryClose.addEventListener("click", closeGlossary);
   els.glossaryAdd.addEventListener("click", () => {
     if (!state.glossary) state.glossary = [];
@@ -2969,6 +3019,7 @@ function wire() {
     if (e.key !== "Escape") return;
     if (!els.urlModal.classList.contains("hidden")) closeUrlModal();
     if (els.glossaryModal && !els.glossaryModal.classList.contains("hidden")) closeGlossary();
+    if (els.helpModal && !els.helpModal.classList.contains("hidden")) closeHelp();
     els.topMenu.classList.add("hidden");
   });
   $("btnDetect").addEventListener("click", runDetect);

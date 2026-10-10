@@ -412,6 +412,9 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .gloss-paste { margin-top: 4px; }
 .gloss-paste > summary { cursor: pointer; color: var(--muted); font-size: 12px; }
 .gloss-paste textarea { min-height: 90px; margin-top: 6px; }
+.help-body { max-height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.modal-box .steps { display: block; text-align: left; margin: 6px 0 10px; padding-left: 22px; line-height: 1.9; color: var(--text); font-size: 13px; }
+.modal-box .steps b { color: var(--accent-2); }
 .modal-status.error { color: var(--danger); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 

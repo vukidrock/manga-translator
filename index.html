@@ -34,6 +34,7 @@
       <button id="btnAddImages" class="primary" title="Thêm một hoặc nhiều ảnh trang truyện"><i data-lucide="image-plus"></i>Ảnh</button>
       <button id="btnAddUrl" title="Dán URL ảnh hoặc URL trang chương"><i data-lucide="link"></i>URL</button>
       <button id="btnDetect" title="Phát hiện bong bóng và ô chữ bằng model"><i data-lucide="scan-search"></i>Nhận diện</button>
+      <button id="btnAuto" class="primary" title="Tự động cả trang: Nhận diện → OCR → Dịch → Xoá chữ"><i data-lucide="zap"></i>Tự động</button>
     </div>
 
     <div class="group">
@@ -119,6 +120,7 @@
     <div class="menu-sep"></div>
     <div class="menu-group-label"><i data-lucide="palette"></i>Giao diện</div>
     <button id="btnTheme">Nền tối</button>
+    <button id="btnHelp"><i data-lucide="circle-help"></i>Hướng dẫn sử dụng</button>
     <details class="menu-details">
       <summary>Phím tắt</summary>
       <div class="menu-hint"><b>⌘/Ctrl + Z</b> — Hoàn tác<br /><b>⌘/Ctrl + ⇧ + Z</b> — Làm lại<br /><b>K</b> (Alt+K khi đang gõ) — Giữ nguyên vùng đang chọn<br /><b>Delete / Backspace</b> — Xoá vùng đang chọn<br /><b>Double-click vùng</b> — Zoom sát vùng<br /><b>Giữ Shift khi xoay</b> — Bắt góc 15°</div>
@@ -270,6 +272,30 @@
         <div class="modal-actions"><button id="glossaryImport">Nhập vào bảng</button></div>
       </details>
       <div id="glossaryStatus" class="modal-status"></div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="helpModal">
+    <div class="modal-box">
+      <div class="modal-title">Hướng dẫn nhanh</div>
+      <div class="help-body">
+        <p class="muted">Quy trình cơ bản (làm theo thứ tự):</p>
+        <ol class="steps">
+          <li><b>+ Ảnh</b> / <b>+ URL</b> — thêm trang truyện.</li>
+          <li><b>Nhận diện</b> — tìm bong bóng &amp; ô chữ (hoặc bấm <b>Tự động</b> để chạy cả chuỗi).</li>
+          <li><b>OCR</b> — chỉ cần khi dịch <b>Offline</b>. Dịch bằng <b>Gemini</b> thì bỏ qua (Gemini đọc chữ từ ảnh).</li>
+          <li><b>Dịch</b> — điền bản dịch; sửa lại ở bảng bên phải.</li>
+          <li><b>Xoá chữ AI</b> hoặc <b>Cọ tẩy</b> — dọn chữ gốc, tái tạo nền.</li>
+          <li><b>ZIP</b> — xuất ảnh đã dịch.</li>
+        </ol>
+        <p class="muted"><b>Tự động</b> = làm bước 2→5 cho <b>trang hiện tại</b> một lần.</p>
+        <p class="muted">
+          Mẹo: bật <b>Đối chiếu</b> để xem gốc | dịch cạnh nhau; <b>double-click</b> một khung để zoom;
+          <b>kéo/xoay/đa giác</b> để khớp chữ; <b>K</b> để giữ nguyên vùng; <b>Ctrl/Cmd+Z</b> để hoàn tác.
+          Thêm <b>Bảng thuật ngữ</b> (menu ⋯) để dịch tên riêng nhất quán.
+        </p>
+      </div>
+      <div class="modal-actions"><button id="helpClose" class="primary">Đã hiểu</button></div>
     </div>
   </div>
 
