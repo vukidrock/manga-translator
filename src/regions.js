@@ -283,15 +283,24 @@ export function wrapText(ctx, tokens, maxWidth) {
   return lines.length ? lines : [""];
 }
 
+// Tôn trọng ký tự xuống hàng thủ công "\n"; phần còn lại tự bẻ dòng theo bề rộng.
+function wrapPreservingBreaks(ctx, text, maxWidth) {
+  const lines = [];
+  for (const segment of String(text ?? "").split(/\r\n|\r|\n/)) {
+    lines.push(...wrapText(ctx, tokenize(segment), maxWidth));
+  }
+  return lines.length ? lines : [""];
+}
+
 export function fitText(ctx, text, boxW, boxH, style) {
   const safeW = Math.max(8, boxW - 4);
-  const tokens = tokenize(applyTransform(text || "", style.textTransform));
+  const raw = applyTransform(text || "", style.textTransform);
   const min = 7;
 
   if (!style.autoFit) {
     const size = Math.round(clamp(style.size, min, 200));
     ctx.font = fontString(style, size);
-    const lines = wrapText(ctx, tokens, safeW);
+    const lines = wrapPreservingBreaks(ctx, raw, safeW);
     const lh = size * style.lineHeight;
     return { size, lines, lh, total: lines.length * lh };
   }
@@ -299,13 +308,13 @@ export function fitText(ctx, text, boxW, boxH, style) {
   const cap = Math.round(clamp(boxH, 8, 160));
   for (let size = cap; size >= min; size--) {
     ctx.font = fontString(style, size);
-    const lines = wrapText(ctx, tokens, safeW);
+    const lines = wrapPreservingBreaks(ctx, raw, safeW);
     const lh = size * style.lineHeight;
     const total = lines.length * lh;
     const widest = Math.max(...lines.map((l) => ctx.measureText(l).width));
     if (total <= boxH + 1 && widest <= safeW + 0.5) return { size, lines, lh, total };
   }
   ctx.font = fontString(style, min);
-  const lines = wrapText(ctx, tokens, safeW);
+  const lines = wrapPreservingBreaks(ctx, raw, safeW);
   return { size: min, lines, lh: min * style.lineHeight, total: lines.length * min * style.lineHeight, overflow: true };
 }

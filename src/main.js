@@ -1661,7 +1661,7 @@ function renderFields() {
       <label><input type="checkbox" id="fldCustom" ${r.custom ? "checked" : ""}/> Tùy chỉnh riêng khung này</label>
       ${r.custom ? '<button id="btnUseGlobal">Dùng kiểu chung</button>' : '<span class="cls">đang dùng kiểu chung</span>'}
     </div>
-    <textarea id="fldText" placeholder="Nhập bản dịch của bạn…">${escapeHtml(r.text || "")}</textarea>
+    <textarea id="fldText" placeholder="Nhập bản dịch của bạn… (Enter để xuống hàng theo ý)">${escapeHtml(r.text || "")}</textarea>
 
     <div>
       <label>Nguyên văn (OCR)</label>
