@@ -580,6 +580,7 @@ function renderGlobalFields() {
 }
 
 function setStatus(msg, spinner = false, ok = false) {
+  els.status.title = msg;
   els.status.innerHTML = `${spinner ? '<span class="spinner"></span>' : ""}<span style="${ok ? "color:var(--ok)" : ""}">${escapeHtml(
     msg,
   )}</span>`;
