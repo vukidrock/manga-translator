@@ -178,7 +178,7 @@ select.compact { max-width: 110px; padding: 6px 6px; }
 .toolbar .inline { display: flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; }
 
 .layout {
-  height: calc(100vh - var(--toolbar-h) - var(--status-h) - var(--filterbar-h));
+  height: calc(100vh - var(--toolbar-h) - var(--status-h));
   display: grid;
   grid-template-columns: 132px 1fr 320px;
 }

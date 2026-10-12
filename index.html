@@ -69,17 +69,6 @@
     <input id="projectInput" type="file" accept=".mtproj,.zip,application/zip" hidden />
   </header>
 
-  <div class="filterbar" id="filterbar">
-    <span class="filterbar-label">Lọc</span>
-    <div class="legend" id="legend" title="Bấm để lọc danh sách trang theo trạng thái">
-      <button type="button" class="legend-item" data-filter="empty"><i class="dot empty"></i>Chưa nhận diện <span class="legend-count" data-count="empty"></span></button>
-      <button type="button" class="legend-item" data-filter="none"><i class="dot none"></i>Chưa dịch <span class="legend-count" data-count="none"></span></button>
-      <button type="button" class="legend-item" data-filter="partial"><i class="dot partial"></i>Dở dang <span class="legend-count" data-count="partial"></span></button>
-      <button type="button" class="legend-item" data-filter="done"><i class="dot done"></i>Đã dịch <span class="legend-count" data-count="done"></span></button>
-      <button type="button" class="legend-item" data-filter="ai"><i class="dot ai"></i>Đã xoá chữ AI <span class="legend-count" data-count="ai"></span></button>
-    </div>
-  </div>
-
   <div class="menu hidden" id="topMenu">
     <div class="menu-group-label"><i data-lucide="zap"></i>Tự động</div>
     <button id="btnAutoAll"><i data-lucide="list-checks"></i>Tự động cả bộ (hàng đợi)</button>
@@ -149,6 +138,16 @@
     </aside>
 
     <section class="stage-wrap">
+      <div class="filterbar" id="filterbar">
+        <span class="filterbar-label">Lọc</span>
+        <div class="legend" id="legend" title="Bấm để lọc danh sách trang theo trạng thái">
+          <button type="button" class="legend-item" data-filter="empty"><i class="dot empty"></i>Chưa nhận diện <span class="legend-count" data-count="empty"></span></button>
+          <button type="button" class="legend-item" data-filter="none"><i class="dot none"></i>Chưa dịch <span class="legend-count" data-count="none"></span></button>
+          <button type="button" class="legend-item" data-filter="partial"><i class="dot partial"></i>Dở dang <span class="legend-count" data-count="partial"></span></button>
+          <button type="button" class="legend-item" data-filter="done"><i class="dot done"></i>Đã dịch <span class="legend-count" data-count="done"></span></button>
+          <button type="button" class="legend-item" data-filter="ai"><i class="dot ai"></i>Đã xoá chữ AI <span class="legend-count" data-count="ai"></span></button>
+        </div>
+      </div>
       <div class="panes" id="panes">
         <div class="pane" id="paneOrig">
           <div class="stage-scroll" id="stageScroll">
