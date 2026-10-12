@@ -14,7 +14,9 @@ function getMeasureCtx() {
 export function computeLayout(region) {
   const ctx = getMeasureCtx();
   const { w, h } = regionSize(region);
-  return fitText(ctx, region.text || "", w, h, region.style);
+  const s = region.style || {};
+  const text = `${s.prefix || ""}${region.text || ""}${s.suffix || ""}`;
+  return fitText(ctx, text, w, h, s);
 }
 
 function drawMasks(ctx, regions) {

@@ -41,6 +41,8 @@ export function defaultStyle(size) {
     outline: false,
     outlineColor: "#ffffff",
     outlineWidth: 0,
+    prefix: "",
+    suffix: "",
   };
 }
 

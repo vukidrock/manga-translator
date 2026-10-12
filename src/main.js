@@ -415,7 +415,7 @@ async function refreshGeminiModels() {
   }
 }
 
-const GLOBAL_KEYS = ["family", "weight", "italic", "textTransform", "color", "align", "valign", "autoFit", "lineHeight"];
+const GLOBAL_KEYS = ["family", "weight", "italic", "textTransform", "color", "align", "valign", "autoFit", "lineHeight", "prefix", "suffix"];
 const globalTextStyle = () => state.settings.style;
 
 function applyGlobalToRegion(r) {
@@ -426,7 +426,7 @@ function applyGlobalToRegion(r) {
 // Kiểu chữ nhanh (preset): CHỈ các thuộc tính kiểu chữ, không gồm cài đặt xoá nền.
 const PRESET_KEYS = [
   "family", "size", "weight", "italic", "textTransform", "color", "align", "valign",
-  "lineHeight", "autoFit", "outline", "outlineColor", "outlineWidth",
+  "lineHeight", "autoFit", "outline", "outlineColor", "outlineWidth", "prefix", "suffix",
 ];
 const presetId = () => `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
 function pickPresetStyle(style) {
@@ -530,7 +530,11 @@ function renderGlobalFields() {
         <option value="bottom" ${g.valign === "bottom" ? "selected" : ""}>Dưới</option>
       </select></div>
     </div>
-    <label class="inline" style="text-transform:none;color:var(--text)"><input type="checkbox" id="gAutoFit" ${g.autoFit ? "checked" : ""}/> Tự co chữ cho vừa</label>`;
+    <label class="inline" style="text-transform:none;color:var(--text)"><input type="checkbox" id="gAutoFit" ${g.autoFit ? "checked" : ""}/> Tự co chữ cho vừa</label>
+    <div class="row">
+      <div><label title="Thêm ký tự TRƯỚC bản dịch">Ký tự trước</label><input type="text" id="gPrefix" maxlength="12" value="${escapeHtml(g.prefix || "")}" placeholder="—"/></div>
+      <div><label title="Thêm ký tự SAU bản dịch">Ký tự sau</label><input type="text" id="gSuffix" maxlength="12" value="${escapeHtml(g.suffix || "")}" placeholder="—"/></div>
+    </div>`;
 
   const on = (id, ev, fn) => els.globalFields.querySelector(id)?.addEventListener(ev, fn);
   on("#gFamily", "change", (e) => updateGlobalStyle("family", e.target.value));
@@ -554,6 +558,8 @@ function renderGlobalFields() {
   on("#gAlign", "change", (e) => updateGlobalStyle("align", e.target.value));
   on("#gValign", "change", (e) => updateGlobalStyle("valign", e.target.value));
   on("#gAutoFit", "change", (e) => updateGlobalStyle("autoFit", e.target.checked));
+  on("#gPrefix", "input", (e) => updateGlobalStyle("prefix", e.target.value));
+  on("#gSuffix", "input", (e) => updateGlobalStyle("suffix", e.target.value));
   on("#gSize", "input", (e) => {
     updateGlobalStyle("size", Number(e.target.value) || g.size);
     if (state.settings.style.autoFit) {
@@ -1833,6 +1839,17 @@ function renderFields() {
       <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
     </div>
 
+    <div class="row">
+      <div>
+        <label title="Ký tự thêm vào TRƯỚC bản dịch (vd: … · “ )">Ký tự trước</label>
+        <input type="text" id="fldPrefix" maxlength="12" value="${escapeHtml(r.style.prefix || "")}" placeholder="—"/>
+      </div>
+      <div>
+        <label title="Ký tự thêm vào SAU bản dịch (vd: … · ” )">Ký tự sau</label>
+        <input type="text" id="fldSuffix" maxlength="12" value="${escapeHtml(r.style.suffix || "")}" placeholder="—"/>
+      </div>
+    </div>
+
     <div class="region-actions">
       <button id="btnZoomRegion" style="flex:1" title="Phóng to để đối chiếu kỹ vùng này">Zoom vào vùng</button>
       <button id="btnDeleteRegion" class="danger" style="flex:1">Xoá vùng</button>
@@ -2020,6 +2037,16 @@ function renderFields() {
   });
   on("#fldOutlineWidth", "input", (e) => {
     r.style.outlineWidth = Math.max(0, Number(e.target.value) || 0);
+    refresh();
+  });
+  on("#fldPrefix", "input", (e) => {
+    ensureCustom(r);
+    r.style.prefix = e.target.value;
+    refresh();
+  });
+  on("#fldSuffix", "input", (e) => {
+    ensureCustom(r);
+    r.style.suffix = e.target.value;
     refresh();
   });
   on("#btnDeleteRegion", "click", () => deleteRegion(r.id));
