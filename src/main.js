@@ -2091,7 +2091,7 @@ function updateLegendUI() {
     const key = el.dataset.filter;
     el.classList.toggle("active", key === f);
     const c = el.querySelector(".legend-count");
-    if (c) c.textContent = `(${counts[key] ?? 0})`;
+    if (c) c.textContent = String(counts[key] ?? 0);
   });
 }
 
@@ -3439,7 +3439,7 @@ function wire() {
       state.display.filter = state.display.filter === f ? null : f;
       updateLegendUI();
       renderPages();
-      setStatus(state.display.filter ? `Đang lọc: ${el.textContent.trim()}` : "Bỏ lọc.");
+      setStatus(state.display.filter ? `Đang lọc: ${el.title}` : "Bỏ lọc.");
     });
   });
   $("btnDetect").addEventListener("click", () => runDetect());

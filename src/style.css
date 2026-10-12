@@ -387,10 +387,11 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pages .legend {
-  display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px;
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 8px;
   border-bottom: 1px solid var(--line);
 }
-.pages .legend .legend-item { font-size: 11px; padding: 1px 5px; }
+.pages .legend .legend-item { font-size: 12px; padding: 2px 8px; gap: 6px; }
+.pages .legend .legend-count { color: var(--text); font-weight: 600; }
 .legend-item {
   display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   background: none; border: 1px solid transparent; border-radius: 6px;
@@ -494,7 +495,7 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   .toolbar .brand { display: none; }
 }
 @media (max-width: 1140px) {
-  .pages .legend .legend-count { display: none; }
+  .pages .legend .legend-item { font-size: 11px; padding: 2px 6px; }
 }
 @media (max-width: 980px) {
   .toolbar .project-name { width: 96px; flex: 0 0 96px; }
