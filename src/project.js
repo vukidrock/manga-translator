@@ -14,6 +14,7 @@ export function createState() {
     activeId: null,
     glossary: [],
     tm: [],
+    styles: [],
     settings: { ocrLang: "jpn", ocrMode: "region", threshold: 0.4, transDir: "en-vi", transProvider: "offline", geminiModel: "gemini-3.1-flash-lite", geminiLimits: { rpm: 15, tpm: 250000, rpd: 500 }, useTM: true, style: defaultStyle(24) },
     display: { scale: 1, fit: true, showBoxes: true, compare: false },
   };
@@ -71,7 +72,7 @@ export async function persist(state) {
           regions: page.regions,
         });
       }
-      meta.put({ name: state.name || "", order: state.pages.map((p) => p.id), activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [] }, "state");
+      meta.put({ name: state.name || "", order: state.pages.map((p) => p.id), activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], styles: state.styles || [] }, "state");
     };
     t.oncomplete = () => resolve();
     t.onerror = () => reject(t.error);
@@ -102,6 +103,7 @@ export async function restore() {
   state.name = meta?.name || "";
   state.glossary = meta?.glossary || [];
   state.tm = meta?.tm || [];
+  state.styles = meta?.styles || [];
   if (meta?.settings) Object.assign(state.settings, meta.settings);
   return state;
 }
@@ -163,7 +165,7 @@ export async function exportProject(state) {
   }
   zip.file(
     "project.json",
-    JSON.stringify({ version: 1, app: "manga-translator", name: state.name || "", activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], pages }, null, 2),
+    JSON.stringify({ version: 1, app: "manga-translator", name: state.name || "", activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], styles: state.styles || [], pages }, null, 2),
   );
   return zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
 }
@@ -177,6 +179,7 @@ export async function importProject(file) {
   state.name = data.name || "";
   state.glossary = data.glossary || [];
   state.tm = data.tm || [];
+  state.styles = data.styles || [];
   Object.assign(state.settings, data.settings || {});
   for (const p of data.pages || []) {
     const imgEntry = zip.file(p.imageFile);

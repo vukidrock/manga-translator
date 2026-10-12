@@ -423,6 +423,41 @@ function applyGlobalToRegion(r) {
   for (const k of GLOBAL_KEYS) r.style[k] = state.settings.style[k];
 }
 
+// Kiểu chữ nhanh (preset): CHỈ các thuộc tính kiểu chữ, không gồm cài đặt xoá nền.
+const PRESET_KEYS = [
+  "family", "size", "weight", "italic", "textTransform", "color", "align", "valign",
+  "lineHeight", "autoFit", "outline", "outlineColor", "outlineWidth",
+];
+const presetId = () => `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+function pickPresetStyle(style) {
+  const o = {};
+  for (const k of PRESET_KEYS) o[k] = style[k];
+  return o;
+}
+function applyPresetToRegion(r, preset) {
+  r.custom = true;
+  for (const k of PRESET_KEYS) if (preset.style[k] !== undefined) r.style[k] = preset.style[k];
+  renderFields();
+  refresh();
+  schedulePersist();
+  setStatus(`Đã áp kiểu “${preset.name}”.`, false, true);
+}
+function savePresetFromCurrent(r) {
+  const name = (prompt("Tên kiểu chữ:", "") || "").trim();
+  if (!name) return;
+  if (!state.styles) state.styles = [];
+  state.styles.push({ id: presetId(), name, style: pickPresetStyle(r.style) });
+  renderFields();
+  schedulePersist();
+  setStatus(`Đã lưu kiểu “${name}”.`, false, true);
+}
+function deletePreset(id) {
+  state.styles = (state.styles || []).filter((s) => s.id !== id);
+  renderFields();
+  schedulePersist();
+  setStatus("Đã xoá kiểu chữ.");
+}
+
 function fontStack(name) {
   const n = String(name).trim().replace(/['"]/g, "");
   return `'${n}', 'Be Vietnam Pro', sans-serif`;
@@ -562,6 +597,7 @@ function cloneModel(s) {
     settings: structuredClone(s.settings),
     glossary: structuredClone(s.glossary || []),
     tm: structuredClone(s.tm || []),
+    styles: structuredClone(s.styles || []),
     pages: s.pages.map((p) => ({
       id: p.id,
       name: p.name,
@@ -617,6 +653,7 @@ function applySnapshot(snap) {
   state.settings = structuredClone(snap.settings);
   state.glossary = structuredClone(snap.glossary || []);
   state.tm = structuredClone(snap.tm || []);
+  state.styles = structuredClone(snap.styles || []);
   state.pages = snap.pages.map((p) => ({ ...p, thumb: oldThumbs.get(p.id) || null, regions: structuredClone(p.regions) }));
   els.projectName.value = state.name || "";
   if (!state.pages.some((p) => p.id === selectedId)) selectedId = null;
@@ -1661,6 +1698,13 @@ function renderFields() {
       <label><input type="checkbox" id="fldCustom" ${r.custom ? "checked" : ""}/> Tùy chỉnh riêng khung này</label>
       ${r.custom ? '<button id="btnUseGlobal">Dùng kiểu chung</button>' : '<span class="cls">đang dùng kiểu chung</span>'}
     </div>
+    <div class="preset-row">
+      <label style="margin:0">Kiểu chữ nhanh</label>
+      <div class="preset-chips">
+        ${(state.styles || []).map((p) => `<button type="button" class="preset-chip" data-id="${p.id}" title="Áp kiểu: ${escapeHtml(p.name)}">${escapeHtml(p.name)}<span class="preset-del" data-del="${p.id}" title="Xoá kiểu">×</span></button>`).join("")}
+        <button type="button" class="preset-chip add" id="btnSavePreset" title="Lưu kiểu chữ đang dùng thành kiểu nhanh">＋ Lưu kiểu</button>
+      </div>
+    </div>
     <textarea id="fldText" placeholder="Nhập bản dịch của bạn… (Enter để xuống hàng theo ý)">${escapeHtml(r.text || "")}</textarea>
 
     <div>
@@ -1795,6 +1839,21 @@ function renderFields() {
     </div>`;
 
   const on = (id, ev, fn) => els.fields.querySelector(id)?.addEventListener(ev, fn);
+
+  els.fields.querySelectorAll(".preset-chip[data-id]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      if (e.target.closest(".preset-del")) return;
+      const preset = (state.styles || []).find((s) => s.id === btn.dataset.id);
+      if (preset) applyPresetToRegion(r, preset);
+    });
+  });
+  els.fields.querySelectorAll(".preset-del").forEach((x) =>
+    x.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deletePreset(x.dataset.del);
+    }),
+  );
+  on("#btnSavePreset", "click", () => savePresetFromCurrent(r));
 
   on("#fldText", "input", (e) => {
     r.text = e.target.value;
@@ -3163,14 +3222,15 @@ function newProject() {
       : "Tạo project mới? (Project hiện tại đã xuất, vẫn có thể Mở lại sau.)";
     if (!confirm(msg)) return;
   }
-  const hasMemory = (state.glossary || []).length || (state.tm || []).length;
+  const hasMemory = (state.glossary || []).length || (state.tm || []).length || (state.styles || []).length;
   const keepMemory = hasMemory
     ? confirm(
-        "Giữ lại Bảng thuật ngữ & Bộ nhớ dịch (TM) cho project mới?\n\nOK = giữ lại · Cancel = bắt đầu sạch.",
+        "Giữ lại Bảng thuật ngữ, Bộ nhớ dịch (TM) & Kiểu chữ nhanh cho project mới?\n\nOK = giữ lại · Cancel = bắt đầu sạch.",
       )
     : false;
   const carryGlossary = keepMemory ? structuredClone(state.glossary || []) : [];
   const carryTm = keepMemory ? structuredClone(state.tm || []) : [];
+  const carryStyles = keepMemory ? structuredClone(state.styles || []) : [];
   for (const p of state.pages) {
     dropPageImage(p.id);
     dropCleanImage(p.id);
@@ -3178,6 +3238,7 @@ function newProject() {
   state = createState();
   state.glossary = carryGlossary;
   state.tm = carryTm;
+  state.styles = carryStyles;
   selectedId = null;
   els.projectName.value = "";
   els.threshold.value = state.settings.threshold ?? 0.4;
@@ -3228,6 +3289,7 @@ async function loadProjectFile(file) {
     state = next;
     selectedId = null;
     if (!state.settings.style) state.settings.style = defaultStyle(24);
+    if (!state.styles) state.styles = [];
     els.projectName.value = state.name || "";
     renderGlobalFields();
     await renderActive();
@@ -3580,6 +3642,7 @@ async function boot() {
       els.panes.classList.toggle("comparing", !!state.display.compare);
       selectedId = null;
       if (!state.settings.style) state.settings.style = defaultStyle(24);
+      if (!state.styles) state.styles = [];
       els.projectName.value = state.name || "";
       renderGlobalFields();
       await renderActive();
@@ -3587,6 +3650,7 @@ async function boot() {
       setStatus(`Đã khôi phục ${state.pages.length} trang từ lần trước.`, false, true);
     } else {
       if (!state.settings.style) state.settings.style = defaultStyle(24);
+      if (!state.styles) state.styles = [];
       initTransUI();
       renderGlobalFields();
       renderActive();

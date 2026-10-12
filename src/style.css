@@ -486,3 +486,20 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   .toolbar .project-name { display: none; }
   .statusbar .version { display: none; }
 }
+
+/* Kiểu chữ nhanh (preset) */
+.preset-row { margin-bottom: 6px; }
+.preset-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.preset-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  border-radius: 6px; padding: 3px 7px; font-size: 12px; cursor: pointer;
+}
+.preset-chip:hover { border-color: var(--accent); }
+.preset-chip.add { border-style: dashed; color: var(--muted); }
+.preset-chip .preset-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%; background: rgba(127,127,127,.25);
+  font-size: 11px; line-height: 1;
+}
+.preset-chip .preset-del:hover { background: var(--danger); color: #fff; }
