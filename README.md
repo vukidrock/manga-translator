@@ -1,5 +1,7 @@
 # Manga Translator
 
+[🇬🇧 English](./README.en.md) · 🇻🇳 Tiếng Việt
+
 Trình dịch truyện tranh chạy **hoàn toàn trong trình duyệt**: tự phát hiện bong bóng/ô chữ, OCR, xoá chữ bằng AI (inpainting), dịch, gõ lại bản dịch và xuất ảnh. Ảnh không rời khỏi máy bạn (trừ khi bạn bật dịch bằng Gemini).
 
 ## Tính năng
