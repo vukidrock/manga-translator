@@ -503,3 +503,6 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   font-size: 11px; line-height: 1;
 }
 .preset-chip .preset-del:hover { background: var(--danger); color: #fff; }
+.preset-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.preset-chip.active .preset-del { background: rgba(255,255,255,.3); }
+.preset-chip.active .preset-del:hover { background: var(--danger); color: #fff; }

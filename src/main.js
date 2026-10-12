@@ -434,6 +434,11 @@ function pickPresetStyle(style) {
   for (const k of PRESET_KEYS) o[k] = style[k];
   return o;
 }
+// Vùng đang "mang" preset nào? (khớp đủ các thuộc tính kiểu chữ)
+function matchingPreset(r) {
+  if (!r.custom) return null;
+  return (state.styles || []).find((p) => PRESET_KEYS.every((k) => (r.style[k] ?? "") === (p.style[k] ?? ""))) || null;
+}
 function applyPresetToRegion(r, preset) {
   r.custom = true;
   for (const k of PRESET_KEYS) if (preset.style[k] !== undefined) r.style[k] = preset.style[k];
@@ -1695,6 +1700,9 @@ function renderFields() {
     if (cb) cb.checked = true;
   }
 
+  const activePreset = matchingPreset(r);
+  const activePresetId = activePreset ? activePreset.id : null;
+
   els.fields.innerHTML = `
     <div class="inline-title">
       <label style="margin:0">Bản dịch</label>
@@ -1707,7 +1715,7 @@ function renderFields() {
     <div class="preset-row">
       <label style="margin:0">Kiểu chữ nhanh</label>
       <div class="preset-chips">
-        ${(state.styles || []).map((p) => `<button type="button" class="preset-chip" data-id="${p.id}" title="Áp kiểu: ${escapeHtml(p.name)}">${escapeHtml(p.name)}<span class="preset-del" data-del="${p.id}" title="Xoá kiểu">×</span></button>`).join("")}
+        ${(state.styles || []).map((p) => `<button type="button" class="preset-chip${p.id === activePresetId ? " active" : ""}" data-id="${p.id}" title="${p.id === activePresetId ? "Đang dùng — bấm để bỏ về kiểu chung" : "Áp kiểu"} : ${escapeHtml(p.name)}">${escapeHtml(p.name)}<span class="preset-del" data-del="${p.id}" title="Xoá kiểu">×</span></button>`).join("")}
         <button type="button" class="preset-chip add" id="btnSavePreset" title="Lưu kiểu chữ đang dùng thành kiểu nhanh">＋ Lưu kiểu</button>
       </div>
     </div>
@@ -1861,7 +1869,16 @@ function renderFields() {
     btn.addEventListener("click", (e) => {
       if (e.target.closest(".preset-del")) return;
       const preset = (state.styles || []).find((s) => s.id === btn.dataset.id);
-      if (preset) applyPresetToRegion(r, preset);
+      if (!preset) return;
+      if (btn.classList.contains("active")) {
+        applyGlobalToRegion(r); // bỏ preset -> về kiểu chung
+        renderFields();
+        refresh();
+        schedulePersist();
+        setStatus(`Đã bỏ kiểu “${preset.name}”, về kiểu chung.`, false, true);
+      } else {
+        applyPresetToRegion(r, preset);
+      }
     });
   });
   els.fields.querySelectorAll(".preset-del").forEach((x) =>
