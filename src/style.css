@@ -22,6 +22,7 @@
   --drop-bg: rgba(255, 255, 255, .85);
   --toolbar-h: 52px;
   --status-h: 28px;
+  --filterbar-h: 34px;
 }
 
 [data-theme="dark"] {
@@ -177,7 +178,7 @@ select.compact { max-width: 110px; padding: 6px 6px; }
 .toolbar .inline { display: flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; }
 
 .layout {
-  height: calc(100vh - var(--toolbar-h) - var(--status-h));
+  height: calc(100vh - var(--toolbar-h) - var(--status-h) - var(--filterbar-h));
   display: grid;
   grid-template-columns: 132px 1fr 320px;
 }
@@ -386,12 +387,15 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .statusbar #status {
   flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.pages .legend {
-  display: flex; flex-wrap: wrap; gap: 6px; padding: 7px 8px;
-  border-bottom: 1px solid var(--line);
+.filterbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+  height: var(--filterbar-h); padding: 0 12px; box-sizing: border-box;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  overflow-x: auto;
 }
-.pages .legend .legend-item { font-size: 12px; padding: 2px 8px; gap: 6px; }
-.pages .legend .legend-count { color: var(--text); font-weight: 600; }
+.filterbar-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; flex: 0 0 auto; }
+.filterbar .legend { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.filterbar .legend-count { color: var(--text); font-weight: 600; }
 .legend-item {
   display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   background: none; border: 1px solid transparent; border-radius: 6px;
@@ -495,7 +499,7 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   .toolbar .brand { display: none; }
 }
 @media (max-width: 1140px) {
-  .pages .legend .legend-item { font-size: 11px; padding: 2px 6px; }
+  .filterbar .legend-item { font-size: 11px; padding: 2px 6px; }
 }
 @media (max-width: 980px) {
   .toolbar .project-name { width: 96px; flex: 0 0 96px; }

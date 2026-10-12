@@ -2079,6 +2079,8 @@ const refresh = debounce(() => {
   persistSoon();
 }, 120);
 
+const LEGEND_NAME = { empty: "Chưa nhận diện", none: "Chưa dịch", partial: "Dở dang", done: "Đã dịch", ai: "Đã xoá chữ AI" };
+
 function updateLegendUI() {
   const f = state.display.filter || null;
   const counts = { empty: 0, none: 0, partial: 0, done: 0, ai: 0 };
@@ -2091,7 +2093,7 @@ function updateLegendUI() {
     const key = el.dataset.filter;
     el.classList.toggle("active", key === f);
     const c = el.querySelector(".legend-count");
-    if (c) c.textContent = String(counts[key] ?? 0);
+    if (c) c.textContent = `(${counts[key] ?? 0})`;
   });
 }
 
@@ -3439,7 +3441,7 @@ function wire() {
       state.display.filter = state.display.filter === f ? null : f;
       updateLegendUI();
       renderPages();
-      setStatus(state.display.filter ? `Đang lọc: ${el.title}` : "Bỏ lọc.");
+      setStatus(state.display.filter ? `Đang lọc: ${LEGEND_NAME[f] ?? ""}` : "Bỏ lọc.");
     });
   });
   $("btnDetect").addEventListener("click", () => runDetect());
