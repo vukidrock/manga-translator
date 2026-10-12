@@ -396,6 +396,8 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .dot.partial { background: #d97706; }
 .dot.done { background: #16a34a; }
 .dot.ai { background: #7c3aed; }
+.legend-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend-item.active .legend-count { color: inherit; }
 .statusbar #pageInfo { margin-left: 14px; }
 .queue-info { display: inline-flex; align-items: center; gap: 8px; color: var(--text); }
 .queue-info.hidden { display: none; }

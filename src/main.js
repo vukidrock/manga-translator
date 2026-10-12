@@ -2080,8 +2080,17 @@ const refresh = debounce(() => {
 
 function updateLegendUI() {
   const f = state.display.filter || null;
+  const counts = { empty: 0, none: 0, partial: 0, done: 0, ai: 0 };
+  for (const p of state.pages) {
+    const s = pageStatus(p);
+    counts[s] = (counts[s] || 0) + 1;
+    if (p.cleanBlob) counts.ai++;
+  }
   document.querySelectorAll("#legend .legend-item").forEach((el) => {
-    el.classList.toggle("active", el.dataset.filter === f);
+    const key = el.dataset.filter;
+    el.classList.toggle("active", key === f);
+    const c = el.querySelector(".legend-count");
+    if (c) c.textContent = `(${counts[key] ?? 0})`;
   });
 }
 
