@@ -200,7 +200,7 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   border-bottom: 1px solid var(--line);
 }
 
-.pages-list { overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.pages-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
 .page-thumb {
   position: relative;
   flex: 0 0 auto;
@@ -386,7 +386,11 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .statusbar #status {
   flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.statusbar .legend { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.pages .legend {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.pages .legend .legend-item { font-size: 11px; padding: 1px 5px; }
 .legend-item {
   display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   background: none; border: 1px solid transparent; border-radius: 6px;
@@ -490,7 +494,7 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   .toolbar .brand { display: none; }
 }
 @media (max-width: 1140px) {
-  .statusbar .legend { display: none; }
+  .pages .legend .legend-count { display: none; }
 }
 @media (max-width: 980px) {
   .toolbar .project-name { width: 96px; flex: 0 0 96px; }
