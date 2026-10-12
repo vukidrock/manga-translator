@@ -383,12 +383,19 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   color: var(--muted); font-size: 12px;
 }
 .statusbar .legend { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-.legend-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend-item {
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  background: none; border: 1px solid transparent; border-radius: 6px;
+  color: inherit; font: inherit; padding: 2px 6px; cursor: pointer;
+}
+.legend-item:hover { background: var(--panel-2); }
+.legend-item.active { border-color: var(--accent); background: var(--panel-2); color: var(--text); font-weight: 600; }
 .legend-item .dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 .dot.empty { background: #6b7280; }
 .dot.none { background: #dc2626; }
 .dot.partial { background: #d97706; }
 .dot.done { background: #16a34a; }
+.dot.ai { background: #7c3aed; }
 .statusbar #pageInfo { margin-left: 14px; }
 .queue-info { display: inline-flex; align-items: center; gap: 8px; color: var(--text); }
 .queue-info.hidden { display: none; }

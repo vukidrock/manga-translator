@@ -709,8 +709,10 @@ const persistOnly = debounce(() => persist(state).catch(() => {}), 800);
 async function renderPages() {
   const prevScroll = els.pagesList.scrollTop;
   els.pagesList.innerHTML = "";
+  const filter = state.display.filter || null;
   for (let i = 0; i < state.pages.length; i++) {
     const page = state.pages[i];
+    if (filter === "ai" ? !page.cleanBlob : (filter && pageStatus(page) !== filter)) continue;
     const div = document.createElement("div");
     div.className = "page-thumb" + (page.id === state.activeId ? " active" : "");
     div.dataset.id = page.id;
@@ -749,6 +751,7 @@ async function renderPages() {
   const activeThumb = els.pagesList.querySelector(".page-thumb.active");
   if (activeThumb) activeThumb.scrollIntoView({ block: "nearest" });
   updatePageInfo();
+  updateLegendUI();
 }
 
 let thumbQueue = [];
@@ -2074,6 +2077,13 @@ const refresh = debounce(() => {
   renderOverlay();
   persistSoon();
 }, 120);
+
+function updateLegendUI() {
+  const f = state.display.filter || null;
+  document.querySelectorAll("#legend .legend-item").forEach((el) => {
+    el.classList.toggle("active", el.dataset.filter === f);
+  });
+}
 
 function updatePageInfo() {
   const page = activePage();
@@ -3412,6 +3422,15 @@ function wire() {
     if (els.glossaryModal && !els.glossaryModal.classList.contains("hidden")) closeGlossary();
     if (els.helpModal && !els.helpModal.classList.contains("hidden")) closeHelp();
     els.topMenu.classList.add("hidden");
+  });
+  document.querySelectorAll("#legend .legend-item").forEach((el) => {
+    el.addEventListener("click", () => {
+      const f = el.dataset.filter;
+      state.display.filter = state.display.filter === f ? null : f;
+      updateLegendUI();
+      renderPages();
+      setStatus(state.display.filter ? `Đang lọc: ${el.textContent.trim()}` : "Bỏ lọc.");
+    });
   });
   $("btnDetect").addEventListener("click", () => runDetect());
   $("btnOcr").addEventListener("click", () => runOcr());

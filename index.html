@@ -218,11 +218,12 @@
       <span class="qbar"><i id="qbarFill"></i></span>
       <button id="queueStop" title="Dừng hàng đợi (trang đang chạy sẽ hoàn tất)">Dừng</button>
     </span>
-    <div class="legend" title="Màu số trang trong cột Trang">
-      <span class="legend-item"><i class="dot empty"></i>Chưa nhận diện</span>
-      <span class="legend-item"><i class="dot none"></i>Chưa dịch</span>
-      <span class="legend-item"><i class="dot partial"></i>Dở dang</span>
-      <span class="legend-item"><i class="dot done"></i>Đã dịch</span>
+    <div class="legend" id="legend" title="Bấm để lọc danh sách trang theo trạng thái">
+      <button type="button" class="legend-item" data-filter="empty"><i class="dot empty"></i>Chưa nhận diện</button>
+      <button type="button" class="legend-item" data-filter="none"><i class="dot none"></i>Chưa dịch</button>
+      <button type="button" class="legend-item" data-filter="partial"><i class="dot partial"></i>Dở dang</button>
+      <button type="button" class="legend-item" data-filter="done"><i class="dot done"></i>Đã dịch</button>
+      <button type="button" class="legend-item" data-filter="ai"><i class="dot ai"></i>Đã xoá chữ AI</button>
     </div>
     <span id="pageInfo"></span>
     <span id="appVersion" class="version" title="Phiên bản tool"></span>
