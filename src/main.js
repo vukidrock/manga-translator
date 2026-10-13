@@ -595,6 +595,16 @@ function setBusy(v) {
   syncOcrButton();
 }
 
+// Khi hàng đợi Tự động chạy nền: chỉ sửa dữ liệu, KHÔNG dựng lại UI (tránh cướp focus/nháy).
+let bgMode = false;
+function opUI() {
+  if (bgMode) return;
+  renderOverlay();
+  renderRegionsList();
+  renderFields();
+  updatePageInfo();
+}
+
 let projectDirty = false;
 
 /* ---------------- Undo / Redo ---------------- */
@@ -1607,10 +1617,6 @@ function toggleKeep() {
   setStatus(r.style.keep ? "Đã giữ nguyên vùng (không dịch/xoá)." : "Đã bỏ giữ nguyên.", false, true);
 }
 
-let lastInputAt = 0;
-document.addEventListener("input", () => { lastInputAt = Date.now(); }, true);
-document.addEventListener("keydown", () => { lastInputAt = Date.now(); }, true);
-
 document.addEventListener("keydown", (e) => {
   const tag = document.activeElement?.tagName;
   const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
@@ -2146,11 +2152,8 @@ async function runDetect(pageArg) {
     regions.forEach(applyGlobalToRegion);
     page.regions = regions;
     selectedId = null;
-    renderOverlay();
-    renderRegionsList();
-    renderFields();
-    updatePageInfo();
-    renderPages();
+    opUI();
+    if (!bgMode) renderPages();
     schedulePersist();
     setStatus(`Đã tạo ${regions.length} vùng dịch.`, false, true);
   } catch (err) {
@@ -2241,9 +2244,7 @@ async function runOcr(pageArg) {
       });
       assignWordsToRegions(page.regions, words);
     }
-    renderOverlay();
-    renderRegionsList();
-    renderFields();
+    opUI();
     schedulePersist();
     const garbled = page.regions.filter((r) => looksGarbled(r.source)).length;
     if (garbled >= Math.max(2, Math.ceil(page.regions.length * 0.4))) {
@@ -2324,25 +2325,7 @@ async function runTranslate(pageArg) {
 }
 
 // Tự động 1 trang: Nhận diện → (OCR nếu Offline) → Dịch → Xoá chữ
-// Trong lúc hàng đợi chạy: nếu người dùng đang gõ, tạm hoãn để không cướp focus / làm nháy UI.
-function editingTextInput() {
-  const a = document.activeElement;
-  return !!a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && !a.disabled && !a.readOnly;
-}
-function userEditingRecently() {
-  return editingTextInput() && Date.now() - lastInputAt < 2500;
-}
-async function waitWhileEditing(maxMs = 180000) {
-  let waited = 0;
-  while (userEditingRecently() && !queueCancel) {
-    await new Promise((r) => setTimeout(r, 200));
-    waited += 200;
-    if (waited >= maxMs) break;
-  }
-}
-
 async function autoProcessPage(page) {
-  await waitWhileEditing();
   if (!page.regions.length) {
     await runDetect(page);
     if (!page.regions.length) return false;
@@ -2350,11 +2333,8 @@ async function autoProcessPage(page) {
   const provider = state.settings.transProvider || "offline";
   const active = page.regions.filter((r) => !r.style.keep);
   const needOcr = provider !== "gemini" && active.some((r) => !(r.source || "").trim());
-  await waitWhileEditing();
   if (needOcr) await runOcr(page);
-  await waitWhileEditing();
   await runTranslate(page);
-  await waitWhileEditing();
   if (page.regions.some((r) => !r.style.keep)) await runInpaint(page);
   return true;
 }
@@ -2443,6 +2423,7 @@ async function runQueue() {
   els.btnAuto.disabled = true;
   els.btnAutoAll.disabled = true;
   try {
+    bgMode = true; // chạy nền: không dựng lại UI trong lúc xử lý
     while (queue.length && !queueCancel) {
       const id = queue.shift();
       const page = state.pages.find((p) => p.id === id);
@@ -2463,9 +2444,17 @@ async function runQueue() {
       true,
     );
   } finally {
+    bgMode = false;
     queueRunning = false;
     queueCurrent = null;
     queueCancel = false;
+    // Cập nhật UI một lần sau khi chạy nền xong
+    renderPages();
+    updatePageInfo();
+    renderOverlay();
+    renderRegionsList();
+    renderFields();
+    if (state.display.compare) renderResult();
     els.btnAuto.disabled = busy;
     els.btnAutoAll.disabled = false;
     setTimeout(() => updateQueueUI(), 4000);
@@ -2489,9 +2478,7 @@ async function runOfflineTranslate(pageArg) {
     (r) => (r.source || "").trim() && !(r.text || "").trim() && !r.style.keep,
   );
   if (!targets.length) {
-    renderOverlay();
-    renderRegionsList();
-    renderFields();
+    opUI();
     schedulePersist();
     setStatus("Không có vùng nào cần dịch (cần OCR nguyên văn trước, hoặc đã khớp TM/mọi vùng đã dịch).");
     return;
@@ -2510,10 +2497,7 @@ async function runOfflineTranslate(pageArg) {
         tmRemember(r.source, t);
       }
     });
-    renderOverlay();
-    renderRegionsList();
-    renderFields();
-    updatePageInfo();
+    opUI();
     schedulePersist();
     setStatus(`Đã gợi ý dịch ${targets.length} vùng (${DIRECTIONS[dir]?.label || dir}). Sửa lại nếu cần.`, false, true);
   } catch (err) {
@@ -2669,11 +2653,8 @@ async function runGeminiTranslate(pageArg) {
         n++;
       }
     });
-    renderOverlay();
-    renderRegionsList();
-    renderFields();
-    updatePageInfo();
-    if (activePage()) updatePageBadge(activePage().id);
+    opUI();
+    if (!bgMode && activePage()) updatePageBadge(activePage().id);
     schedulePersist();
     setStatus(`Gemini đã dịch ${n}/${targets.length} vùng. Sửa lại nếu cần.`, false, true);
   } catch (err) {
@@ -2717,8 +2698,10 @@ async function runInpaint(pageArg) {
     page.cleanBlob = await canvasToBlob(canvas, "image/png");
     dropCleanImage(page.id);
     schedulePersist();
-    renderPages();
-    renderResult();
+    if (!bgMode) {
+      renderPages();
+      renderResult();
+    }
     setStatus("Đã xoá chữ bằng AI. Nền sạch được dùng khi xuất & ở khung “Bản dịch”.", false, true);
   } catch (err) {
     console.error(err);
