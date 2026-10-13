@@ -1607,6 +1607,10 @@ function toggleKeep() {
   setStatus(r.style.keep ? "Đã giữ nguyên vùng (không dịch/xoá)." : "Đã bỏ giữ nguyên.", false, true);
 }
 
+let lastInputAt = 0;
+document.addEventListener("input", () => { lastInputAt = Date.now(); }, true);
+document.addEventListener("keydown", () => { lastInputAt = Date.now(); }, true);
+
 document.addEventListener("keydown", (e) => {
   const tag = document.activeElement?.tagName;
   const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
@@ -1692,6 +1696,11 @@ function renderFields() {
     els.fields.innerHTML = '<p class="muted">Chọn một vùng trên ảnh để nhập bản dịch.</p>';
     return;
   }
+  // Giữ nguyên focus + vị trí con trỏ khi dựng lại (tránh mất focus lúc hàng đợi chạy).
+  const focused = document.activeElement;
+  const restoreId = focused && els.fields.contains(focused) ? focused.id : null;
+  const selStart = restoreId ? focused.selectionStart ?? null : null;
+  const selEnd = restoreId ? focused.selectionEnd ?? null : null;
   const fontOptions = FONT_FAMILIES.map(
     (f) => `<option value="${escapeHtml(f.value)}" ${f.value === r.style.family ? "selected" : ""}>${f.label}</option>`,
   ).join("");
@@ -2072,6 +2081,16 @@ function renderFields() {
   });
   on("#btnDeleteRegion", "click", () => deleteRegion(r.id));
   on("#btnZoomRegion", "click", () => zoomToRegion(r));
+
+  if (restoreId) {
+    const el = els.fields.querySelector(`#${restoreId}`);
+    if (el) {
+      el.focus({ preventScroll: true });
+      try { if (selStart != null) el.setSelectionRange(selStart, selEnd); } catch {
+        /* ignore */
+      }
+    }
+  }
 }
 
 const refresh = debounce(() => {
@@ -2305,7 +2324,25 @@ async function runTranslate(pageArg) {
 }
 
 // Tự động 1 trang: Nhận diện → (OCR nếu Offline) → Dịch → Xoá chữ
+// Trong lúc hàng đợi chạy: nếu người dùng đang gõ, tạm hoãn để không cướp focus / làm nháy UI.
+function editingTextInput() {
+  const a = document.activeElement;
+  return !!a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && !a.disabled && !a.readOnly;
+}
+function userEditingRecently() {
+  return editingTextInput() && Date.now() - lastInputAt < 2500;
+}
+async function waitWhileEditing(maxMs = 180000) {
+  let waited = 0;
+  while (userEditingRecently() && !queueCancel) {
+    await new Promise((r) => setTimeout(r, 200));
+    waited += 200;
+    if (waited >= maxMs) break;
+  }
+}
+
 async function autoProcessPage(page) {
+  await waitWhileEditing();
   if (!page.regions.length) {
     await runDetect(page);
     if (!page.regions.length) return false;
@@ -2313,8 +2350,11 @@ async function autoProcessPage(page) {
   const provider = state.settings.transProvider || "offline";
   const active = page.regions.filter((r) => !r.style.keep);
   const needOcr = provider !== "gemini" && active.some((r) => !(r.source || "").trim());
+  await waitWhileEditing();
   if (needOcr) await runOcr(page);
+  await waitWhileEditing();
   await runTranslate(page);
+  await waitWhileEditing();
   if (page.regions.some((r) => !r.style.keep)) await runInpaint(page);
   return true;
 }
