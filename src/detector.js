@@ -29,10 +29,40 @@ export function getOrt() {
     ort.env.wasm.numThreads = isolated ? Math.max(1, Math.min(8, cores)) : 1;
     ort.env.wasm.proxy = true;
     ort.env.logLevel = "error";
-    if (typeof window !== "undefined") window.__ortThreads = ort.env.wasm.numThreads;
+    // WebGPU: ưu tiên GPU (Metal trên macOS) — nhanh & mát hơn WASM, có fallback.
+    try {
+      if (ort.env.webgpu) ort.env.webgpu.powerPreference = "high-performance";
+    } catch {
+      /* ignore */
+    }
+    if (typeof window !== "undefined") {
+      window.__ortThreads = ort.env.wasm.numThreads;
+      window.__hasWebGPU = !!navigator.gpu && !!ort.env.webgpu;
+    }
     ortReady = true;
   }
   return ort;
+}
+
+// Danh sách execution provider theo lựa chọn người dùng (webgpu -> wasm fallback).
+export function executionProviders() {
+  const ort = globalThis.ort;
+  const gpu = globalThis.__mtUseWebGPU !== false && typeof navigator !== "undefined" && !!navigator.gpu && !!(ort && ort.env && ort.env.webgpu);
+  return gpu ? ["webgpu", "wasm"] : ["wasm"];
+}
+
+export async function createOrtSession(ort, modelBytes) {
+  const eps = executionProviders();
+  const opts = { executionProviders: eps, graphOptimizationLevel: "all" };
+  try {
+    return { session: await ort.InferenceSession.create(modelBytes, opts), eps };
+  } catch (err) {
+    if (eps.length > 1) {
+      console.warn("WebGPU session lỗi, quay về WASM:", err?.message || err);
+      return { session: await ort.InferenceSession.create(modelBytes, { executionProviders: ["wasm"], graphOptimizationLevel: "all" }), eps: ["wasm"] };
+    }
+    throw err;
+  }
 }
 
 export async function fetchCached(url, onProgress) {
@@ -97,10 +127,9 @@ export async function ensureDetector({ modelUrl = DEFAULT_MODEL_URL, onProgress,
       modelBytes = await fetchCached(modelUrl, (p) => onProgress?.(p));
     }
     onProgress?.({ phase: "init", ratio: 1 });
-    session = await ort.InferenceSession.create(modelBytes, {
-      executionProviders: ["wasm"],
-      graphOptimizationLevel: "all",
-    });
+    const { session: s, eps } = await createOrtSession(ort, modelBytes);
+    session = s;
+    globalThis.__ortLastEps = eps;
     onProgress?.({ phase: "ready", ratio: 1 });
     return session;
   })();

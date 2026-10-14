@@ -14,6 +14,7 @@ A manga/comic translator that runs **entirely in your browser**: it detects spee
   - Or **Gemini API** (reads the text and translates with context) — optional, needs an API key.
 - **Compare frame** original | translated, zoom into a single region (double-click a box).
 - **Page list** with natural sort and a status badge per page (not detected / untranslated / in progress / translated). Click a status badge to **filter** the list.
+- **WebGPU acceleration** (on by default): run the detect/inpaint models on the **GPU (Metal)** — faster and cooler than WASM; automatically falls back to CPU when the browser lacks support (menu ⋯).
 - **Quick text-style presets**: save a style (font, size, weight, color, alignment, outline, plus optional prefix/suffix characters) and apply it to a region in one click. The active preset is highlighted; click it again to revert to the shared style.
 - **Undo / redo**.
 - **Add images**: from disk, from a direct image URL, or from a **chapter URL** (fetched through Jina Reader, images extracted in order).

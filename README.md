@@ -13,7 +13,8 @@ Trình dịch truyện tranh chạy **hoàn toàn trong trình duyệt**: tự p
   - Offline miễn phí (Transformers.js — opus-mt Anh↔Việt).
   - Hoặc **Gemini API** (đọc chữ + dịch theo ngữ cảnh) — tuỳ chọn, cần API key.
 - **Khung đối chiếu** bản gốc | bản dịch, zoom sát từng vùng (double-click vào khung).
-- **Sắp xếp danh sách trang** đúng thứ tự (natural sort), báo trạng thái từng trang (chưa nhận diện / chưa dịch / dở dang / đã dịch).
+- **Sắp xếp danh sách trang** đúng thứ tự (natural sort), báo trạng thái từng trang (chưa nhận diện / chưa dịch / dở dang / đã dịch) + **lọc nhanh bằng badge**.
+- **Tăng tốc WebGPU** (mặc định bật): chạy model detect/inpaint trên **GPU (Metal)** — nhanh và mát máy hơn WASM; tự quay về CPU nếu trình duyệt không hỗ trợ (menu ⋯).
 - **Thêm ảnh**: từ máy, từ URL ảnh, hoặc **URL trang chương** (đọc qua Jina Reader rồi trích ảnh).
 - **Lưu project** tự động (IndexedDB), xuất/nhập `.mtproj`, xuất PNG/ZIP.
 - Font hỗ trợ tiếng Việt, theme sáng/tối, tuỳ chỉnh kiểu chữ chung + riêng từng khung.

@@ -9,7 +9,7 @@ import {
   center,
   nextFrame,
 } from "./util.js";
-import { detect, CLASS_LABEL_VI } from "./detector.js";
+import { detect, CLASS_LABEL_VI, clearDetector } from "./detector.js";
 import { recognize, ocrCanvas } from "./ocr.js";
 import { DIRECTIONS, translateBatch } from "./translate.js";
 import { geminiTranslatePage, listGeminiModels } from "./gemini.js";
@@ -28,7 +28,7 @@ import {
   rectCorners,
 } from "./regions.js";
 import { renderPage, exportPageBlob, makeThumb, computeLayout } from "./render.js";
-import { inpaintImage, inpaintRaster } from "./inpaint.js";
+import { inpaintImage, inpaintRaster, clearInpaintModel } from "./inpaint.js";
 import {
   createState,
   persist,
@@ -64,6 +64,7 @@ const els = {
   threshold: $("threshold"),
   thresholdVal: $("thresholdVal"),
   ocrModeRegion: $("ocrModeRegion"),
+  webgpuToggle: $("webgpuToggle"),
   ocrLang: $("ocrLang"),
   btnTranslate: $("btnTranslate"),
   transDir: $("transDir"),
@@ -603,6 +604,15 @@ function opUI() {
   renderRegionsList();
   renderFields();
   updatePageInfo();
+}
+
+// Áp lựa chọn engine (WebGPU) cho onnxruntime-web.
+function applyEnginePref() {
+  globalThis.__mtUseWebGPU = state.settings.webgpu !== false;
+}
+function resetOrtSessions() {
+  try { clearDetector(); } catch { /* ignore */ }
+  try { clearInpaintModel(); } catch { /* ignore */ }
 }
 
 let projectDirty = false;
@@ -2137,6 +2147,7 @@ async function runDetect(pageArg) {
   const page = pageArg || activePage();
   if (!page || busy) return;
   const { img } = await getPageImage(page);
+  const t0 = performance.now();
   setBusy(true);
   setStatus("Đang tải model nhận diện…", true);
   try {
@@ -2155,7 +2166,8 @@ async function runDetect(pageArg) {
     opUI();
     if (!bgMode) renderPages();
     schedulePersist();
-    setStatus(`Đã tạo ${regions.length} vùng dịch.`, false, true);
+    const ep = (globalThis.__ortLastEps || []).includes("webgpu") ? "GPU" : "CPU";
+    setStatus(`Đã tạo ${regions.length} vùng dịch (${Math.round(performance.now() - t0)}ms · ${ep}).`, false, true);
   } catch (err) {
     console.error(err);
     setStatus(`Lỗi nhận diện: ${err.message}`);
@@ -2684,6 +2696,7 @@ async function runInpaint(pageArg) {
     return;
   }
   const { img } = await getPageImage(page);
+  const tInpaint0 = performance.now();
   setBusy(true);
   try {
     setStatus("Đang tải model xoá chữ (LaMa ~60MB, chỉ lần đầu)…", true);
@@ -2702,7 +2715,8 @@ async function runInpaint(pageArg) {
       renderPages();
       renderResult();
     }
-    setStatus("Đã xoá chữ bằng AI. Nền sạch được dùng khi xuất & ở khung “Bản dịch”.", false, true);
+    const epI = (globalThis.__ortLastEps || []).includes("webgpu") ? "GPU" : "CPU";
+    setStatus(`Đã xoá chữ bằng AI (${Math.round(performance.now() - tInpaint0)}ms · ${epI}). Nền sạch dùng khi xuất & ở khung “Bản dịch”.`, false, true);
   } catch (err) {
     console.error(err);
     setStatus(`Lỗi xoá chữ: ${err.message}`);
@@ -3335,6 +3349,7 @@ function newProject() {
   els.ocrLang.value = state.settings.ocrLang || "jpn";
   els.transDir.value = state.settings.transDir || "en-vi";
   els.ocrModeRegion.checked = state.settings.ocrMode !== "page";
+  els.webgpuToggle.checked = state.settings.webgpu !== false;
   els.showBoxes.checked = true;
   els.compareToggle.checked = false;
   els.paneResult.classList.add("hidden");
@@ -3566,6 +3581,19 @@ function wire() {
     state.settings.ocrMode = els.ocrModeRegion.checked ? "region" : "page";
     persistSoon();
   });
+  els.webgpuToggle?.addEventListener("change", () => {
+    state.settings.webgpu = els.webgpuToggle.checked;
+    applyEnginePref();
+    resetOrtSessions();
+    persistSoon();
+    setStatus(
+      state.settings.webgpu
+        ? "Đã bật WebGPU — model sẽ chạy lại trên GPU ở lần tới (tự về CPU nếu không hỗ trợ)."
+        : "Đã tắt WebGPU — dùng CPU (WASM).",
+      false,
+      true,
+    );
+  });
   els.transProvider.addEventListener("change", () => {
     state.settings.transProvider = els.transProvider.value;
     updateTransProviderUI();
@@ -3754,6 +3782,8 @@ async function boot() {
       renderActive();
       renderPages();
     }
+    els.webgpuToggle.checked = state.settings.webgpu !== false;
+    applyEnginePref();
     resetHistory();
     refreshIcons();
   } finally {

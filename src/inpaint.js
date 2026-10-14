@@ -1,4 +1,4 @@
-import { getOrt, fetchCached } from "./detector.js";
+import { getOrt, fetchCached, createOrtSession } from "./detector.js";
 import { pathShape, rectCorners } from "./regions.js";
 
 const MODEL_URL =
@@ -32,10 +32,8 @@ export async function ensureInpaintModel({ onProgress, force = false } = {}) {
 }
 
 async function createSession(ort, modelBytes) {
-  return ort.InferenceSession.create(modelBytes, {
-    executionProviders: ["wasm"],
-    graphOptimizationLevel: "all",
-  });
+  const { session } = await createOrtSession(ort, modelBytes);
+  return session;
 }
 
 export function clearInpaintModel() {
