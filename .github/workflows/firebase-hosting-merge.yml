@@ -3,6 +3,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "index.html"
+      - "src/**"
+      - "firebase.json"
+      - ".github/workflows/**"
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
