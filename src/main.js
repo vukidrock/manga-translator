@@ -70,6 +70,12 @@ const els = {
   transDir: $("transDir"),
   transProvider: $("transProvider"),
   geminiKey: $("geminiKey"),
+  btnKey: $("btnKey"),
+  keyModal: $("keyModal"),
+  keyInput: $("keyInput"),
+  keyStatus: $("keyStatus"),
+  keySave: $("keySave"),
+  keyCancel: $("keyCancel"),
   geminiModel: $("geminiModel"),
   geminiKeyRow: $("geminiKeyRow"),
   geminiModelRow: $("geminiModelRow"),
@@ -216,8 +222,38 @@ function updateTransProviderUI() {
   if (els.geminiLimits) els.geminiLimits.style.display = gem ? "" : "none";
   if (els.geminiCountdown) els.geminiCountdown.style.display = gem && cooling ? "" : "none";
   if (els.btnTranslate) els.btnTranslate.disabled = busy || cooling;
+  if (els.btnKey) els.btnKey.classList.toggle("hidden", !(gem && !geminiKeyReady()));
   syncOcrButton();
   updateGeminiUsageUI();
+}
+
+function openKeyModal() {
+  if (!els.keyModal) return;
+  els.keyStatus.textContent = "";
+  els.keyInput.value = (els.geminiKey && els.geminiKey.value) || "";
+  els.keyModal.classList.remove("hidden");
+  els.keyInput.focus();
+}
+function closeKeyModal() {
+  if (els.keyModal) els.keyModal.classList.add("hidden");
+}
+function saveKeyModal() {
+  const val = (els.keyInput.value || "").trim();
+  els.geminiKey.value = val;
+  try {
+    localStorage.setItem("mt-gemini-key", val);
+  } catch {
+    /* ignore */
+  }
+  updateTransProviderUI();
+  persistSoon();
+  if (val) {
+    refreshGeminiModels();
+    setStatus("Đã lưu Gemini key.", false, true);
+  } else {
+    setStatus("Đã xoá Gemini key.");
+  }
+  closeKeyModal();
 }
 
 // OCR chỉ cần cho dịch Offline; khi dùng Gemini thì khoá lại (Gemini tự đọc chữ từ ảnh).
@@ -3485,9 +3521,15 @@ function wire() {
   els.urlModal.addEventListener("click", (e) => {
     if (e.target === els.urlModal) closeUrlModal();
   });
+  if (els.btnKey) els.btnKey.addEventListener("click", openKeyModal);
+  if (els.keySave) els.keySave.addEventListener("click", saveKeyModal);
+  if (els.keyCancel) els.keyCancel.addEventListener("click", closeKeyModal);
+  if (els.keyModal) els.keyModal.addEventListener("click", (e) => { if (e.target === els.keyModal) closeKeyModal(); });
+  if (els.keyInput) els.keyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveKeyModal(); });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!els.urlModal.classList.contains("hidden")) closeUrlModal();
+    if (els.keyModal && !els.keyModal.classList.contains("hidden")) closeKeyModal();
     if (els.glossaryModal && !els.glossaryModal.classList.contains("hidden")) closeGlossary();
     if (els.helpModal && !els.helpModal.classList.contains("hidden")) closeHelp();
     els.topMenu.classList.add("hidden");
@@ -3630,8 +3672,9 @@ function wire() {
     } catch {
       /* ignore */
     }
+    updateTransProviderUI();
   });
-  els.geminiKey.addEventListener("change", () => refreshGeminiModels());
+  els.geminiKey.addEventListener("change", () => { refreshGeminiModels(); updateTransProviderUI(); });
   const saveLimits = () => {
     state.settings.geminiLimits = {
       rpm: Number(els.limRpm.value) || 5,
