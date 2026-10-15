@@ -253,22 +253,38 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .pane.hidden { display: none; }
 .pane + .pane { border-left: 2px solid var(--line); }
 
-/* Thanh tool dọc kẹp giữa 2 khung (chỉ hiện khi Đối chiếu) */
+/* Bảng tool dọc kẹp giữa 2 khung (gốc | dịch) */
 .center-bar {
-  display: none; flex: 0 0 auto; width: 46px;
-  flex-direction: column; align-items: center; gap: 6px;
-  padding: 8px 4px; background: var(--panel);
-  border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+  position: relative; flex: 0 0 auto; width: 62px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--stage-bg);
 }
-.panes.comparing .center-bar { display: flex; }
+.center-bar::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+  background: var(--line); transform: translateX(-50%); z-index: 0;
+}
+.cb-panel {
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px 6px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 16px; box-shadow: var(--shadow);
+}
 .center-bar button {
-  width: 32px; height: 32px; padding: 0; min-width: 0; font-size: 16px; line-height: 1;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); cursor: pointer;
+  width: 36px; height: 36px; padding: 0; min-width: 0; font-size: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--text); cursor: pointer;
 }
-.center-bar button:hover { background: var(--panel-2); }
-.center-bar .cb-sep { width: 60%; height: 1px; background: var(--line); margin: 2px 0; }
+.center-bar button:hover { background: var(--panel-2); border-color: var(--accent); }
+.center-bar button:disabled { opacity: .45; cursor: default; }
+.center-bar button.primary { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+.center-bar button.primary:hover { background: var(--accent); }
+.center-bar button svg { width: 18px; height: 18px; margin: 0; }
+.center-bar #cZoomIn, .center-bar #cZoomOut, .center-bar #cFit { font-size: 17px; }
+.center-bar .cb-sep { width: 22px; height: 1px; background: var(--line); }
+.center-bar .cb-group {
+  display: flex; flex-direction: column; gap: 4px; padding: 5px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2);
+}
 .center-bar .cb-box { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; color: var(--muted); cursor: pointer; }
-.center-bar + .pane { border-left: none; }
 .pane-label {
   position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
   background: rgba(0,0,0,.6); color: #fff; font-size: 11px; padding: 2px 9px;
