@@ -3810,12 +3810,21 @@ let syncingScroll = false;
 function setupScrollSync() {
   const a = els.stageScroll;
   const b = els.resultScroll;
+  const isRtl = (el) => getComputedStyle(el).direction === "rtl";
+  const readX = (el) => {
+    const max = Math.max(1, el.scrollWidth - el.clientWidth);
+    const left = isRtl(el) ? -el.scrollLeft : el.scrollLeft; // Chrome: RTL dùng mô hình scrollLeft âm
+    return clamp(left / max, 0, 1);
+  };
+  const writeX = (el, frac) => {
+    const max = Math.max(0, el.scrollWidth - el.clientWidth);
+    el.scrollLeft = Math.round((isRtl(el) ? -1 : 1) * frac * max);
+  };
   const link = (src, dst) => () => {
     if (syncingScroll || els.paneResult.classList.contains("hidden")) return;
     syncingScroll = true;
-    const maxSx = Math.max(1, src.scrollWidth - src.clientWidth);
+    writeX(dst, readX(src));
     const maxSy = Math.max(1, src.scrollHeight - src.clientHeight);
-    dst.scrollLeft = (src.scrollLeft / maxSx) * Math.max(0, dst.scrollWidth - dst.clientWidth);
     dst.scrollTop = (src.scrollTop / maxSy) * Math.max(0, dst.scrollHeight - dst.clientHeight);
     requestAnimationFrame(() => (syncingScroll = false));
   };
