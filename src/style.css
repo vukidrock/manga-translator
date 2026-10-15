@@ -122,7 +122,10 @@ select.compact { max-width: 110px; padding: 6px 6px; }
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
   box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; gap: 1px;
 }
-.menu select, .menu input { width: 100%; max-width: 100%; min-width: 0; }
+.menu select, .menu input { max-width: 100%; min-width: 0; }
+.menu select,
+.menu input:not([type="checkbox"]):not([type="radio"]) { width: 100%; }
+.menu input[type="checkbox"], .menu input[type="radio"] { width: auto; max-width: none; flex: 0 0 auto; margin: 0; }
 .menu button svg, .toolbar button svg { width: 15px; height: 15px; vertical-align: -3px; margin-right: 5px; flex: 0 0 auto; }
 .menu-btn svg { margin-right: 0; }
 .menu-group-label svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 4px; }
