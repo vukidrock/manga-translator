@@ -1011,8 +1011,13 @@ function zoomToRegion(r) {
   renderOverlay();
   requestAnimationFrame(() => {
     const sc = els.stageScroll;
-    sc.scrollLeft = (b.x + b.w / 2) * s - sc.clientWidth / 2;
-    sc.scrollTop = (b.y + b.h / 2) * s - sc.clientHeight / 2;
+    const rtl = getComputedStyle(sc).direction === "rtl";
+    const maxX = Math.max(0, sc.scrollWidth - sc.clientWidth);
+    const maxY = Math.max(0, sc.scrollHeight - sc.clientHeight);
+    const left = clamp((b.x + b.w / 2) * s - sc.clientWidth / 2, 0, maxX); // khoảng cách từ mép TRÁI
+    const top = clamp((b.y + b.h / 2) * s - sc.clientHeight / 2, 0, maxY);
+    sc.scrollLeft = rtl ? left - maxX : left; // RTL Chrome: 0 = mép phải, -max = mép trái
+    sc.scrollTop = top;
   });
   setStatus(`Đã zoom vào vùng (${Math.round(s * 100)}%). Bấm “Vừa” để xem toàn trang.`);
 }
