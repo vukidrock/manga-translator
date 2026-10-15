@@ -896,6 +896,7 @@ async function setActivePage(id) {
 async function renderActive() {
   const page = activePage();
   if (!page) {
+    els.panes.classList.add("empty");
     els.pageImg.removeAttribute("src");
     els.overlay.innerHTML = "";
     els.emptyHint.classList.remove("hidden");
@@ -904,6 +905,7 @@ async function renderActive() {
     renderFields();
     return;
   }
+  els.panes.classList.remove("empty");
   els.emptyHint.classList.add("hidden");
   setStatus("Đang tải trang…", true);
   const { img } = await getPageImage(page);

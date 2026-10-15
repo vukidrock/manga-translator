@@ -249,6 +249,7 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 
 .stage-wrap { position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--stage-bg); }
 .panes { flex: 1; display: flex; overflow: hidden; min-height: 0; position: relative; }
+.panes.empty { display: none; }
 #paneResult { border-left: 2px solid var(--line); }
 .pane { position: relative; flex: 1 1 0; min-width: 0; display: flex; overflow: hidden; }
 .pane.hidden { display: none; }
