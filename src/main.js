@@ -2975,11 +2975,12 @@ async function fetchDirect(url, timeoutMs = 25000) {
 const weservUrl = (url) => `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
 const localProxyUrl = (url) => `${location.origin}/proxy?url=${encodeURIComponent(url)}`;
 
+const isLocalDev = () => /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname);
+
 async function fetchImageBlob(url, useProxy) {
   const strategies = [];
-  const overHttp = location.protocol.startsWith("http");
-  // Ưu tiên proxy qua server local (same-origin, không dính CORS) khi chạy `npm run serve`.
-  if (overHttp) strategies.push(() => fetchDirect(localProxyUrl(url)));
+  // Proxy local (/proxy) CHỈ có khi chạy `npm run serve` — không có trên hosting tĩnh.
+  if (isLocalDev()) strategies.push(() => fetchDirect(localProxyUrl(url)));
   strategies.push(() => fetchDirect(url));
   if (useProxy) {
     strategies.push(() => fetchDirect(weservUrl(url)), () => imgToBlob(weservUrl(url)));
