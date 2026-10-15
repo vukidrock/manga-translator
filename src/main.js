@@ -3806,7 +3806,6 @@ function wire() {
 
 /* ---------------- Boot ---------------- */
 
-let syncingScroll = false;
 function setupScrollSync() {
   const a = els.stageScroll;
   const b = els.resultScroll;
@@ -3816,17 +3815,18 @@ function setupScrollSync() {
     const max = Math.max(1, el.scrollWidth - el.clientWidth);
     return isRtl(el) ? clamp((max + el.scrollLeft) / max, 0, 1) : clamp(el.scrollLeft / max, 0, 1);
   };
-  const writeX = (el, frac) => {
-    const max = Math.max(0, el.scrollWidth - el.clientWidth);
-    el.scrollLeft = isRtl(el) ? Math.round((frac - 1) * max) : Math.round(frac * max);
-  };
+  // Chỉ ghi khi lệch > 1px -> sự kiện scroll phát sinh sẽ tự triệt tiêu, không nháy/đẩy ngược.
   const link = (src, dst) => () => {
-    if (syncingScroll || els.paneResult.classList.contains("hidden")) return;
-    syncingScroll = true;
-    writeX(dst, readX(src));
+    if (els.paneResult.classList.contains("hidden")) return;
+    const maxSx = Math.max(1, src.scrollWidth - src.clientWidth);
+    const maxDx = Math.max(0, dst.scrollWidth - dst.clientWidth);
+    const frac = readX(src);
+    const tl = isRtl(dst) ? Math.round((frac - 1) * maxDx) : Math.round(frac * maxDx);
+    if (Math.abs(dst.scrollLeft - tl) > 1) dst.scrollLeft = tl;
     const maxSy = Math.max(1, src.scrollHeight - src.clientHeight);
-    dst.scrollTop = (src.scrollTop / maxSy) * Math.max(0, dst.scrollHeight - dst.clientHeight);
-    requestAnimationFrame(() => (syncingScroll = false));
+    const maxDy = Math.max(0, dst.scrollHeight - dst.clientHeight);
+    const tt = Math.round((src.scrollTop / maxSy) * maxDy);
+    if (Math.abs(dst.scrollTop - tt) > 1) dst.scrollTop = tt;
   };
   a.addEventListener("scroll", link(a, b));
   b.addEventListener("scroll", link(b, a));
