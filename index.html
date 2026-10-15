@@ -35,10 +35,6 @@
       <button id="btnAddUrl" title="Dán URL ảnh hoặc URL trang chương"><i data-lucide="link"></i>URL</button>
     </div>
 
-    <div class="group auto-group">
-      <button id="btnAuto" class="primary" title="Tự động cả trang: Nhận diện → OCR → Dịch → Xoá chữ"><i data-lucide="zap"></i>Tự động</button>
-    </div>
-
     <div class="group manual-group">
       <select id="ocrLang" class="compact" title="Ngôn ngữ gốc của truyện (cho OCR)">
         <option value="jpn">日本語 · Nhật</option>
@@ -65,9 +61,6 @@
   </header>
 
   <div class="menu hidden" id="topMenu">
-    <div class="menu-group-label"><i data-lucide="zap"></i>Tự động</div>
-    <button id="btnAutoAll"><i data-lucide="list-checks"></i>Tự động cả bộ (hàng đợi)</button>
-    <div class="menu-sep"></div>
     <div class="menu-group-label"><i data-lucide="book-open"></i>Trang &amp; dự án</div>
     <button id="btnUndo">Hoàn tác</button>
     <button id="btnRedo">Làm lại</button>
@@ -159,6 +152,9 @@
         </div>
         <div class="center-bar" id="centerBar">
           <div class="cb-panel">
+            <button id="btnAuto" class="primary" title="Tự động TRANG ĐANG XEM: Nhận diện → Dịch → Xoá chữ"><i data-lucide="zap"></i>Tự động trang</button>
+            <button id="btnAutoAll" title="Tự động TOÀN BỘ danh sách trang (hàng đợi)"><i data-lucide="list-checks"></i>Tự động cả bộ</button>
+            <span class="cb-sep"></span>
             <button id="cZoomIn" title="Phóng to">+</button>
             <button id="cZoomOut" title="Thu nhỏ">−</button>
             <button id="cFit" title="Vừa khung">⤢</button>
