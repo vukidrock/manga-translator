@@ -461,7 +461,8 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .queue-info .qbar > i { display: block; height: 100%; width: 0; background: var(--accent-2); transition: width .2s; }
 .queue-info button { padding: 1px 8px; font-size: 11px; }
 .queue-info .spinner { margin-right: 0; }
-.statusbar .version { margin-left: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.statusbar .version { margin-left: 14px; color: var(--muted); font-variant-numeric: tabular-nums; text-decoration: none; }
+.statusbar a.version:hover { color: var(--accent); text-decoration: underline; }
 .menu-version { padding: 6px 10px; margin-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 
 .dropzone {
