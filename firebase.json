@@ -5,12 +5,16 @@
     "ignore": [
       "firebase.json",
       "**/.*",
+      ".git/**",
+      ".firebase/**",
+      "**/.DS_Store",
       "**/node_modules/**",
       "scripts/**",
       "package.json",
       "package-lock.json",
       "AGENTS.md",
       "README*",
+      "*.md",
       "test-page.png"
     ],
     "headers": [
