@@ -3811,14 +3811,14 @@ function setupScrollSync() {
   const a = els.stageScroll;
   const b = els.resultScroll;
   const isRtl = (el) => getComputedStyle(el).direction === "rtl";
+  // Chrome RTL (mô hình âm): scrollLeft = 0 (mép phải) .. -max (mép trái)
   const readX = (el) => {
     const max = Math.max(1, el.scrollWidth - el.clientWidth);
-    const left = isRtl(el) ? -el.scrollLeft : el.scrollLeft; // Chrome: RTL dùng mô hình scrollLeft âm
-    return clamp(left / max, 0, 1);
+    return isRtl(el) ? clamp((max + el.scrollLeft) / max, 0, 1) : clamp(el.scrollLeft / max, 0, 1);
   };
   const writeX = (el, frac) => {
     const max = Math.max(0, el.scrollWidth - el.clientWidth);
-    el.scrollLeft = Math.round((isRtl(el) ? -1 : 1) * frac * max);
+    el.scrollLeft = isRtl(el) ? Math.round((frac - 1) * max) : Math.round(frac * max);
   };
   const link = (src, dst) => () => {
     if (syncingScroll || els.paneResult.classList.contains("hidden")) return;
