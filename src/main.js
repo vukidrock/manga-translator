@@ -3815,18 +3815,23 @@ function setupScrollSync() {
     const max = Math.max(1, el.scrollWidth - el.clientWidth);
     return isRtl(el) ? clamp((max + el.scrollLeft) / max, 0, 1) : clamp(el.scrollLeft / max, 0, 1);
   };
-  // Chỉ ghi khi lệch > 1px -> sự kiện scroll phát sinh sẽ tự triệt tiêu, không nháy/đẩy ngược.
+  // Bỏ qua sự kiện scroll do CHÍNH TA vừa bơm vào pane đích (chặn vòng lặp echo -> hết nháy).
+  const suppressUntil = new WeakMap();
   const link = (src, dst) => () => {
     if (els.paneResult.classList.contains("hidden")) return;
+    const now = performance.now();
+    if ((suppressUntil.get(src) || 0) > now) return;
     const maxSx = Math.max(1, src.scrollWidth - src.clientWidth);
     const maxDx = Math.max(0, dst.scrollWidth - dst.clientWidth);
     const frac = readX(src);
     const tl = isRtl(dst) ? Math.round((frac - 1) * maxDx) : Math.round(frac * maxDx);
-    if (Math.abs(dst.scrollLeft - tl) > 1) dst.scrollLeft = tl;
     const maxSy = Math.max(1, src.scrollHeight - src.clientHeight);
     const maxDy = Math.max(0, dst.scrollHeight - dst.clientHeight);
     const tt = Math.round((src.scrollTop / maxSy) * maxDy);
-    if (Math.abs(dst.scrollTop - tt) > 1) dst.scrollTop = tt;
+    let changed = false;
+    if (Math.abs(dst.scrollLeft - tl) > 1) { dst.scrollLeft = tl; changed = true; }
+    if (Math.abs(dst.scrollTop - tt) > 1) { dst.scrollTop = tt; changed = true; }
+    if (changed) suppressUntil.set(dst, now + 120);
   };
   a.addEventListener("scroll", link(a, b));
   b.addEventListener("scroll", link(b, a));
