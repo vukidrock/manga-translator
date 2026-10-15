@@ -91,6 +91,10 @@ const els = {
   zoomSelect: $("zoomSelect"),
   showBoxes: $("showBoxes"),
   compareToggle: $("compareToggle"),
+  cZoomIn: $("cZoomIn"),
+  cZoomOut: $("cZoomOut"),
+  cFit: $("cFit"),
+  cShowBoxes: $("cShowBoxes"),
   panes: $("panes"),
   paneResult: $("paneResult"),
   resultScroll: $("resultScroll"),
@@ -963,6 +967,14 @@ function syncZoomSelect() {
   custom.value = String(state.display.scale);
   custom.textContent = `${pct}%`;
   sel.value = custom.value;
+}
+
+function applyCompareUI() {
+  const on = !!state.display.compare;
+  els.compareToggle.checked = on;
+  els.paneResult.classList.toggle("hidden", !on);
+  els.panes.classList.toggle("comparing", on);
+  if (els.cShowBoxes) els.cShowBoxes.checked = state.display.showBoxes !== false;
 }
 
 function applyScale() {
@@ -3405,10 +3417,8 @@ function newProject() {
   els.transDir.value = state.settings.transDir || "en-vi";
   els.ocrModeRegion.checked = state.settings.ocrMode !== "page";
   els.webgpuToggle.checked = state.settings.webgpu !== false;
-  els.showBoxes.checked = true;
-  els.compareToggle.checked = false;
-  els.paneResult.classList.add("hidden");
-  els.panes.classList.remove("comparing");
+  els.showBoxes.checked = state.display.showBoxes !== false;
+  applyCompareUI();
   initTransUI();
   renderGlobalFields();
   renderPages();
@@ -3453,6 +3463,8 @@ async function loadProjectFile(file) {
     renderGlobalFields();
     await renderActive();
     renderPages();
+    applyCompareUI();
+    if (state.display.compare) renderResult();
     await persist(state);
     projectDirty = false;
     resetHistory();
@@ -3689,19 +3701,37 @@ function wire() {
   els.limRpd.addEventListener("change", saveLimits);
   els.showBoxes.addEventListener("change", () => {
     state.display.showBoxes = els.showBoxes.checked;
+    if (els.cShowBoxes) els.cShowBoxes.checked = els.showBoxes.checked;
     renderOverlay();
   });
+  if (els.cShowBoxes) {
+    els.cShowBoxes.addEventListener("change", () => {
+      state.display.showBoxes = els.cShowBoxes.checked;
+      els.showBoxes.checked = els.cShowBoxes.checked;
+      renderOverlay();
+    });
+  }
 
   els.compareToggle.addEventListener("change", () => {
     state.display.compare = els.compareToggle.checked;
-    els.paneResult.classList.toggle("hidden", !state.display.compare);
-    els.panes.classList.toggle("comparing", state.display.compare);
+    applyCompareUI();
     renderOverlay();
     if (state.display.compare) {
       applyScale();
       renderResult();
     }
   });
+  if (els.cZoomIn) els.cZoomIn.addEventListener("click", () => $("zoomIn").click());
+  if (els.cZoomOut) els.cZoomOut.addEventListener("click", () => $("zoomOut").click());
+  if (els.cFit) {
+    els.cFit.addEventListener("click", () => {
+      state.display.fit = true;
+      state.display.scale = 1;
+      applyScale();
+      syncZoomSelect();
+      renderOverlay();
+    });
+  }
   setupScrollSync();
 
   $("zoomIn").addEventListener("click", () => {
@@ -3825,9 +3855,7 @@ async function boot() {
       els.ocrModeRegion.checked = state.settings.ocrMode !== "page";
       initTransUI();
       els.showBoxes.checked = state.display.showBoxes !== false;
-      els.compareToggle.checked = !!state.display.compare;
-      els.paneResult.classList.toggle("hidden", !state.display.compare);
-      els.panes.classList.toggle("comparing", !!state.display.compare);
+      applyCompareUI();
       selectedId = null;
       if (!state.settings.style) state.settings.style = defaultStyle(24);
       if (!state.styles) state.styles = [];
@@ -3835,6 +3863,7 @@ async function boot() {
       renderGlobalFields();
       await renderActive();
       renderPages();
+      if (state.display.compare) renderResult();
       setStatus(`Đã khôi phục ${state.pages.length} trang từ lần trước.`, false, true);
     } else {
       if (!state.settings.style) state.settings.style = defaultStyle(24);
@@ -3843,6 +3872,7 @@ async function boot() {
       renderGlobalFields();
       renderActive();
       renderPages();
+      applyCompareUI();
     }
     els.webgpuToggle.checked = state.settings.webgpu !== false;
     applyEnginePref();
