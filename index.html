@@ -49,7 +49,7 @@
         <option value="eng">English</option>
         <option value="vie">Tiếng Việt</option>
       </select>
-      <button id="btnOcr" title="Chạy OCR để điền nguyên văn"><i data-lucide="scan-text"></i>OCR</button>
+      <button id="btnOcr" title="OCR cơ bản (chữ sạch) — chỉ cần cho dịch Offline; chữ truyện cách điệu nên dùng Gemini"><i data-lucide="scan-text"></i>OCR</button>
       <select id="transDir" class="compact" title="Chiều dịch gợi ý">
         <option value="en-vi">Anh → Việt</option>
         <option value="vi-en">Việt → Anh</option>
@@ -185,8 +185,8 @@
         <ol class="steps">
           <li><b>+ Ảnh</b> hoặc <b>+ URL</b> — thêm trang</li>
           <li><b>Nhận diện</b> — tìm bong bóng &amp; ô chữ</li>
-          <li><b>OCR</b> (dịch Offline) — hoặc nhập Gemini API key ở menu <b>⋯</b></li>
-          <li><b>Dịch</b> — điền bản dịch, rồi sửa trong bảng bên phải</li>
+          <li><b>Dịch</b> — nhập <b>Gemini API key</b> ở menu <b>⋯</b> (khuyến nghị: đọc chữ từ ảnh, không cần OCR), hoặc dùng <b>Offline</b> (cần <b>OCR</b> trước)</li>
+          <li>Sửa bản dịch trong bảng bên phải</li>
           <li><b>Xoá chữ AI</b> / <b>Cọ tẩy</b> — dọn chữ gốc</li>
           <li><b>ZIP</b> — xuất ảnh đã dịch</li>
         </ol>
@@ -311,7 +311,7 @@
         <ol class="steps">
           <li><b>+ Ảnh</b> / <b>+ URL</b> — thêm trang truyện.</li>
           <li><b>Nhận diện</b> — tìm bong bóng &amp; ô chữ (hoặc bấm <b>Tự động</b> để chạy cả chuỗi).</li>
-          <li><b>OCR</b> — chỉ cần khi dịch <b>Offline</b>. Dịch bằng <b>Gemini</b> thì bỏ qua (Gemini đọc chữ từ ảnh).</li>
+          <li><b>Dịch</b> — nên dùng <b>Gemini</b> (đọc chữ từ ảnh + dịch theo ngữ cảnh, <b>không cần OCR</b>). Chọn <b>Offline</b> thì phải <b>OCR</b> trước; OCR cơ bản chỉ hợp chữ sạch/đánh máy.</li>
           <li><b>Dịch</b> — điền bản dịch; sửa lại ở bảng bên phải.</li>
           <li><b>Xoá chữ AI</b> hoặc <b>Cọ tẩy</b> — dọn chữ gốc, tái tạo nền.</li>
           <li><b>ZIP</b> — xuất ảnh đã dịch.</li>

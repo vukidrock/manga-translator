@@ -227,7 +227,9 @@ function syncOcrButton() {
   const sel = els.ocrLang;
   if (b) {
     b.disabled = busy || gem;
-    b.title = gem ? "Không cần khi dịch bằng Gemini (Gemini đọc chữ từ ảnh)" : "Chạy OCR để điền nguyên văn (cho dịch Offline)";
+    b.title = gem
+      ? "Không cần khi dịch bằng Gemini (Gemini đọc chữ từ ảnh)"
+      : "OCR cơ bản — chỉ hợp chữ sạch/đánh máy. Chữ truyện cách điệu nên dùng Gemini.";
   }
   if (sel) {
     sel.disabled = busy || gem;
@@ -2337,7 +2339,15 @@ async function runTranslate(pageArg) {
 }
 
 // Tự động 1 trang: Nhận diện → (OCR nếu Offline) → Dịch → Xoá chữ
+function geminiKeyReady() {
+  return !!(els.geminiKey && (els.geminiKey.value || "").trim());
+}
+function providerNeedsKey() {
+  return (state.settings.transProvider || "gemini") === "gemini" && !geminiKeyReady();
+}
+
 async function autoProcessPage(page) {
+  if (providerNeedsKey()) return false;
   if (!page.regions.length) {
     await runDetect(page);
     if (!page.regions.length) return false;
@@ -2357,6 +2367,10 @@ async function runAuto() {
   if (!page || autoRunning || queueRunning) return;
   if (!state.pages.length) {
     setStatus("Chưa có trang nào. Thêm ảnh trước.");
+    return;
+  }
+  if (providerNeedsKey()) {
+    setStatus("Đang dùng Gemini nhưng chưa có API key — mở menu ⋯ để nhập (hoặc đổi Nguồn dịch sang Offline).", true);
     return;
   }
   autoRunning = true;
@@ -2416,6 +2430,10 @@ function queueAutoAll() {
   const ids = state.pages.filter((p) => pageStatus(p) !== "done").map((p) => p.id);
   if (!ids.length) {
     setStatus("Không có trang nào cần tự động (tất cả đã xong).");
+    return;
+  }
+  if (providerNeedsKey()) {
+    setStatus("Đang dùng Gemini nhưng chưa có API key — mở menu ⋯ để nhập (hoặc đổi Nguồn dịch sang Offline).", true);
     return;
   }
   queueAutoPages(ids);
