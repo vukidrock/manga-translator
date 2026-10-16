@@ -943,6 +943,7 @@ async function renderActive() {
   renderOverlay();
   renderRegionsList();
   renderFields();
+  if (state.display.compare) renderResult();
 }
 
 function fitScale() {
