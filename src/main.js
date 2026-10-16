@@ -1929,7 +1929,7 @@ function renderFields() {
     </div>
 
     <details class="adv-fields">
-      <summary>Nâng cao — xoay / đa giác / xoá nền</summary>
+      <summary>Nâng cao</summary>
     <div class="row">
       <div>
         <label title="Xoay CHỮ theo độ (đa giác: chữ không tự xoay khi kéo đỉnh)">Xoay chữ (°)</label>
@@ -1959,7 +1959,7 @@ function renderFields() {
         <input type="color" id="fldFillColor" value="${r.style.fillColor}"/>
       </div>
       <div>
-        <label title="Chỉ dùng cho 'Cả bong bóng': chừa lại bao nhiêu px để giữ viền/nét">Chừa lề viền</label>
+        <label title="Chỉ dùng cho 'Cả bong bóng': chừa lại bao nhiêu px để giữ viền/nét">Lề viền</label>
         <input type="number" id="fldInset" min="0" max="60" value="${r.style.eraseInset ?? 0}"/>
       </div>
       <div>
