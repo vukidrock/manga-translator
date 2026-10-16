@@ -1806,6 +1806,7 @@ function renderFields() {
   const restoreId = focused && els.fields.contains(focused) ? focused.id : null;
   const selStart = restoreId ? focused.selectionStart ?? null : null;
   const selEnd = restoreId ? focused.selectionEnd ?? null : null;
+  const advOpen = !!els.fields.querySelector(".adv-fields")?.open;
   const fontOptions = FONT_FAMILIES.map(
     (f) => `<option value="${escapeHtml(f.value)}" ${f.value === r.style.family ? "selected" : ""}>${f.label}</option>`,
   ).join("");
@@ -2191,6 +2192,8 @@ function renderFields() {
   on("#btnDeleteRegion", "click", () => deleteRegion(r.id));
   on("#btnZoomRegion", "click", () => zoomToRegion(r));
 
+  const adv = els.fields.querySelector(".adv-fields");
+  if (adv && advOpen) adv.open = true; // giữ mở mục "Nâng cao" khi dựng lại (vd bật Đa giác)
   if (restoreId) {
     const el = els.fields.querySelector(`#${restoreId}`);
     if (el) {
