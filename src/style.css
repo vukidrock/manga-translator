@@ -602,7 +602,10 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .preset-chip.active .preset-del:hover { background: var(--danger); color: #fff; }
 
 /* Trường nâng cao (gấp gọn) */
-.adv-fields { margin: 2px 0; }
+.adv-fields {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line);
+}
 .adv-fields > summary {
   cursor: pointer; color: var(--muted); font-size: 11px; text-transform: uppercase;
   letter-spacing: .4px; padding: 5px 0; list-style: none;
