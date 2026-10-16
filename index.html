@@ -27,6 +27,10 @@
 </head>
 <body>
   <header class="toolbar">
+    <div class="group only-narrow">
+      <button id="btnTogglePages" title="Danh sách trang"><i data-lucide="panel-left"></i></button>
+      <button id="btnToggleInspector" title="Vùng dịch"><i data-lucide="panel-right"></i></button>
+    </div>
     <div class="brand">Manga&nbsp;Translator</div>
     <input id="projectName" class="project-name" type="text" placeholder="Đặt tên project…" spellcheck="false" />
 
@@ -179,6 +183,7 @@
             </div>
           </div>
           <span class="pane-label">Bản dịch</span>
+          <div class="result-empty hidden" id="resultEmpty">Chưa có bản dịch — bấm <b>Dịch</b></div>
         </div>
       </div>
       <div class="brush-bar hidden" id="brushBar">
@@ -352,6 +357,8 @@
       </div>
     </div>
   </div>
+
+  <div class="backdrop hidden" id="backdrop"></div>
 
   <datalist id="localFontsList"></datalist>
 

@@ -71,6 +71,10 @@ const els = {
   transProvider: $("transProvider"),
   geminiKey: $("geminiKey"),
   btnKey: $("btnKey"),
+  btnTogglePages: $("btnTogglePages"),
+  btnToggleInspector: $("btnToggleInspector"),
+  backdrop: $("backdrop"),
+  resultEmpty: $("resultEmpty"),
   keyModal: $("keyModal"),
   keyInput: $("keyInput"),
   keyStatus: $("keyStatus"),
@@ -267,12 +271,14 @@ function syncOcrButton() {
   const sel = els.ocrLang;
   if (b) {
     b.disabled = busy || gem;
+    b.style.display = gem ? "none" : "";
     b.title = gem
       ? "Không cần khi dịch bằng Gemini (Gemini đọc chữ từ ảnh)"
       : "OCR cơ bản — chỉ hợp chữ sạch/đánh máy. Chữ truyện cách điệu nên dùng Gemini.";
   }
   if (sel) {
     sel.disabled = busy || gem;
+    sel.style.display = gem ? "none" : "";
     sel.title = gem ? "Không cần khi dùng Gemini" : "Ngôn ngữ gốc của truyện (cho OCR)";
   }
 }
@@ -646,6 +652,7 @@ function opUI() {
   renderRegionsList();
   renderFields();
   updatePageInfo();
+  if (state.display.compare) renderResult();
 }
 
 // Áp lựa chọn engine (WebGPU) cho onnxruntime-web.
@@ -655,6 +662,22 @@ function applyEnginePref() {
 function resetOrtSessions() {
   try { clearDetector(); } catch { /* ignore */ }
   try { clearInpaintModel(); } catch { /* ignore */ }
+}
+
+// Gợi ý bước tiếp theo cho người mới (sau khi thêm ảnh đầu tiên).
+let nudgedStart = false;
+function nudgeStart() {
+  if (nudgedStart) return;
+  nudgedStart = true;
+  setTimeout(() => {
+    if (busy) return;
+    setStatus("Bước tiếp theo: bấm “Nhận diện” để tìm bong bóng, rồi “Dịch”.", false, true);
+    const b = $("btnDetect");
+    if (b) {
+      b.classList.add("pulse");
+      setTimeout(() => b.classList.remove("pulse"), 5200);
+    }
+  }, 700);
 }
 
 let projectDirty = false;
@@ -888,6 +911,7 @@ async function setActivePage(id) {
   if (state.activeId === id) return;
   state.activeId = id;
   selectedId = null;
+  closeDrawers();
   await renderActive();
   renderPages();
   persistSoon();
@@ -1033,9 +1057,17 @@ function scheduleResult() {
   });
 }
 
+function updateResultEmpty() {
+  if (!els.resultEmpty) return;
+  const page = activePage();
+  const hasText = !!(page && page.regions.some((r) => !r.style.keep && (r.text || "").trim()));
+  els.resultEmpty.classList.toggle("hidden", !(state.display.compare && page && !hasText));
+}
+
 async function renderResult() {
   const page = activePage();
   if (!page) return;
+  updateResultEmpty();
   const img = await workingImage(page);
   const originalImage = page.cleanBlob ? (await getPageImage(page)).img : null;
   const canvas = renderPage(img, page.regions, { skipErase: !!page.cleanBlob, originalImage });
@@ -1887,6 +1919,8 @@ function renderFields() {
       <input type="checkbox" id="fldKeep" ${r.style.keep ? "checked" : ""}/> Giữ nguyên (tên riêng — không dịch/xoá)
     </label>
 
+    <details class="adv-fields">
+      <summary>Nâng cao — xoay / đa giác / xoá nền / viền</summary>
     <div class="row">
       <div>
         <label title="Xoay CHỮ theo độ (đa giác: chữ không tự xoay khi kéo đỉnh)">Xoay chữ (°)</label>
@@ -1932,6 +1966,7 @@ function renderFields() {
       <input type="color" id="fldOutlineColor" value="${r.style.outlineColor}"/>
       <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
     </div>
+    </details>
 
     <div class="row">
       <div>
@@ -2905,6 +2940,7 @@ async function addFiles(files) {
   maybeNameProject(baseName(list[0].name));
   schedulePersist();
   setStatus(`Đã thêm ${list.length} trang.`, false, true);
+  nudgeStart();
 }
 
 /* ---------------- Thêm ảnh bằng URL ---------------- */
@@ -3346,6 +3382,7 @@ async function addFromUrls() {
     els.urlStatus.classList.add("error");
     setStatus(`Đã thêm ${ok} trang (một số lỗi).`);
   }
+  nudgeStart();
 }
 
 async function copyText(text) {
@@ -3486,6 +3523,22 @@ async function loadProjectFile(file) {
 
 /* ---------------- UI wiring ---------------- */
 
+function closeDrawers() {
+  document.getElementById("pages")?.classList.remove("open");
+  document.getElementById("inspector")?.classList.remove("open");
+  els.backdrop?.classList.add("hidden");
+}
+function toggleDrawer(which) {
+  const el = document.getElementById(which);
+  if (!el) return;
+  const willOpen = !el.classList.contains("open");
+  closeDrawers();
+  if (willOpen) {
+    el.classList.add("open");
+    els.backdrop?.classList.remove("hidden");
+  }
+}
+
 function wire() {
   if (els.appVersion) els.appVersion.textContent = `v${APP_VERSION}`;
   if (els.menuVersion) els.menuVersion.textContent = `Manga Translator v${APP_VERSION}`;
@@ -3545,6 +3598,9 @@ function wire() {
   if (els.keyCancel) els.keyCancel.addEventListener("click", closeKeyModal);
   if (els.keyModal) els.keyModal.addEventListener("click", (e) => { if (e.target === els.keyModal) closeKeyModal(); });
   if (els.keyInput) els.keyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveKeyModal(); });
+  if (els.btnTogglePages) els.btnTogglePages.addEventListener("click", () => toggleDrawer("pages"));
+  if (els.btnToggleInspector) els.btnToggleInspector.addEventListener("click", () => toggleDrawer("inspector"));
+  if (els.backdrop) els.backdrop.addEventListener("click", closeDrawers);
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!els.urlModal.classList.contains("hidden")) closeUrlModal();
