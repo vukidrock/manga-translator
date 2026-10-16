@@ -1919,8 +1919,16 @@ function renderFields() {
       <input type="checkbox" id="fldKeep" ${r.style.keep ? "checked" : ""}/> Giữ nguyên (tên riêng — không dịch/xoá)
     </label>
 
+    <div class="row">
+      <label class="inline" style="text-transform:none;color:var(--text)">
+        <input type="checkbox" id="fldOutline" ${r.style.outline ? "checked" : ""}/> Viền chữ
+      </label>
+      <input type="color" id="fldOutlineColor" value="${r.style.outlineColor}"/>
+      <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
+    </div>
+
     <details class="adv-fields">
-      <summary>Nâng cao — xoay / đa giác / xoá nền / viền</summary>
+      <summary>Nâng cao — xoay / đa giác / xoá nền</summary>
     <div class="row">
       <div>
         <label title="Xoay CHỮ theo độ (đa giác: chữ không tự xoay khi kéo đỉnh)">Xoay chữ (°)</label>
@@ -1959,13 +1967,6 @@ function renderFields() {
       </div>
     </div>
 
-    <div class="row">
-      <label class="inline" style="text-transform:none;color:var(--text)">
-        <input type="checkbox" id="fldOutline" ${r.style.outline ? "checked" : ""}/> Viền chữ
-      </label>
-      <input type="color" id="fldOutlineColor" value="${r.style.outlineColor}"/>
-      <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
-    </div>
     </details>
 
     <div class="row">
