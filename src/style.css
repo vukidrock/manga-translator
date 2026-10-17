@@ -638,3 +638,24 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 }
 .color-custom input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .color-custom input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0; }
+
+/* Bảng màu dùng chung project */
+.hidden-color { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.palette-btn {
+  width: 24px; height: 24px; flex: 0 0 auto; padding: 0; display: inline-flex;
+  align-items: center; justify-content: center; border-radius: 7px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--muted); cursor: pointer;
+}
+.palette-btn:hover { border-color: var(--accent); color: var(--text); }
+.palette-btn svg { width: 15px; height: 15px; margin: 0; }
+.palette-pop {
+  position: fixed; z-index: 300; max-width: 240px;
+  display: grid; grid-template-columns: repeat(6, 24px); gap: 6px;
+  padding: 8px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: var(--shadow);
+}
+.palette-pop.hidden { display: none; }
+.p-swatch { width: 24px; height: 24px; padding: 0; border-radius: 6px; border: 1px solid var(--line); background: var(--sw); cursor: pointer; }
+.p-swatch:hover { transform: translateY(-1px); border-color: var(--accent); }
+.p-add { width: 24px; height: 24px; padding: 0; border-radius: 6px; border: 1px dashed var(--line); background: transparent; color: var(--muted); cursor: pointer; font-size: 14px; }
+.p-add:hover { border-color: var(--accent); color: var(--text); }

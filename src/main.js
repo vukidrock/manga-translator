@@ -75,6 +75,8 @@ const els = {
   btnToggleInspector: $("btnToggleInspector"),
   backdrop: $("backdrop"),
   resultEmpty: $("resultEmpty"),
+  palettePop: $("palettePop"),
+  paletteNewColor: $("paletteNewColor"),
   keyModal: $("keyModal"),
   keyInput: $("keyInput"),
   keyStatus: $("keyStatus"),
@@ -500,6 +502,7 @@ function savePresetFromCurrent(r) {
   const name = (prompt("Tên kiểu chữ:", "") || "").trim();
   if (!name) return;
   if (!state.styles) state.styles = [];
+      if (!state.palette) state.palette = [];
   state.styles.push({ id: presetId(), name, style: pickPresetStyle(r.style) });
   renderFields();
   schedulePersist();
@@ -695,6 +698,7 @@ function cloneModel(s) {
     glossary: structuredClone(s.glossary || []),
     tm: structuredClone(s.tm || []),
     styles: structuredClone(s.styles || []),
+    palette: structuredClone(s.palette || []),
     pages: s.pages.map((p) => ({
       id: p.id,
       name: p.name,
@@ -751,6 +755,7 @@ function applySnapshot(snap) {
   state.glossary = structuredClone(snap.glossary || []);
   state.tm = structuredClone(snap.tm || []);
   state.styles = structuredClone(snap.styles || []);
+  state.palette = structuredClone(snap.palette || []);
   state.pages = snap.pages.map((p) => ({ ...p, thumb: oldThumbs.get(p.id) || null, regions: structuredClone(p.regions) }));
   els.projectName.value = state.name || "";
   if (!state.pages.some((p) => p.id === selectedId)) selectedId = null;
@@ -1878,7 +1883,8 @@ function renderFields() {
         <div class="color-row">
           <button type="button" class="swatch" style="--sw:#111111" data-target="fldColor" data-color="#111111" title="Đen"></button>
           <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldColor" data-color="#ffffff" title="Trắng"></button>
-          <label class="color-custom" title="Màu tuỳ ý"><input type="color" id="fldColor" value="${r.style.color}" ${dis}/></label>
+          <input type="color" id="fldColor" value="${r.style.color}" ${dis} class="hidden-color"/>
+          <button type="button" class="palette-btn" data-target="fldColor" title="Bảng màu của project"><i data-lucide="palette"></i></button>
         </div>
       </div>
     </div>
@@ -1932,7 +1938,8 @@ function renderFields() {
       <span class="color-row">
         <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldOutlineColor" data-color="#ffffff" title="Trắng"></button>
         <button type="button" class="swatch" style="--sw:#111111" data-target="fldOutlineColor" data-color="#111111" title="Đen"></button>
-        <label class="color-custom" title="Màu viền tuỳ ý"><input type="color" id="fldOutlineColor" value="${r.style.outlineColor}"/></label>
+        <input type="color" id="fldOutlineColor" value="${r.style.outlineColor}" class="hidden-color"/>
+        <button type="button" class="palette-btn" data-target="fldOutlineColor" title="Bảng màu của project"><i data-lucide="palette"></i></button>
       </span>
       <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
     </div>
@@ -1968,7 +1975,8 @@ function renderFields() {
         <div class="color-row">
           <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldFillColor" data-color="#ffffff" title="Trắng"></button>
           <button type="button" class="swatch" style="--sw:#111111" data-target="fldFillColor" data-color="#111111" title="Đen"></button>
-          <label class="color-custom" title="Màu nền tuỳ ý"><input type="color" id="fldFillColor" value="${r.style.fillColor}"/></label>
+          <input type="color" id="fldFillColor" value="${r.style.fillColor}" class="hidden-color"/>
+          <button type="button" class="palette-btn" data-target="fldFillColor" title="Bảng màu của project"><i data-lucide="palette"></i></button>
         </div>
       </div>
       <div>
@@ -2207,6 +2215,7 @@ function renderFields() {
 
   const adv = els.fields.querySelector(".adv-fields");
   if (adv && advOpen) adv.open = true; // giữ mở mục "Nâng cao" khi dựng lại (vd bật Đa giác)
+  refreshIcons(); // đổi icon palette-btn trong fields
   if (restoreId) {
     const el = els.fields.querySelector(`#${restoreId}`);
     if (el) {
@@ -3462,6 +3471,7 @@ function newProject() {
   const carryGlossary = keepMemory ? structuredClone(state.glossary || []) : [];
   const carryTm = keepMemory ? structuredClone(state.tm || []) : [];
   const carryStyles = keepMemory ? structuredClone(state.styles || []) : [];
+  const carryPalette = keepMemory ? structuredClone(state.palette || []) : [];
   for (const p of state.pages) {
     dropPageImage(p.id);
     dropCleanImage(p.id);
@@ -3470,6 +3480,7 @@ function newProject() {
   state.glossary = carryGlossary;
   state.tm = carryTm;
   state.styles = carryStyles;
+  state.palette = carryPalette;
   selectedId = null;
   els.projectName.value = "";
   els.threshold.value = state.settings.threshold ?? 0.4;
@@ -3520,6 +3531,7 @@ async function loadProjectFile(file) {
     selectedId = null;
     if (!state.settings.style) state.settings.style = defaultStyle(24);
     if (!state.styles) state.styles = [];
+      if (!state.palette) state.palette = [];
     els.projectName.value = state.name || "";
     renderGlobalFields();
     await renderActive();
@@ -3545,6 +3557,38 @@ function closeDrawers() {
   document.getElementById("inspector")?.classList.remove("open");
   els.backdrop?.classList.add("hidden");
 }
+// Bảng màu dùng chung project
+let paletteTarget = null;
+let paletteAnchor = null;
+function applyColorTo(targetId, color) {
+  const input = document.getElementById(targetId);
+  if (!input) return;
+  input.value = color;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function openPalette(targetId, btn) {
+  if (!els.palettePop) return;
+  paletteTarget = targetId;
+  paletteAnchor = btn;
+  const colors = state.palette || [];
+  els.palettePop.innerHTML =
+    colors.map((c) => `<button type="button" class="p-swatch" data-color="${c}" style="--sw:${c}" title="${c}"></button>`).join("") +
+    `<button type="button" class="p-add" title="Thêm màu">＋</button>`;
+  els.palettePop.classList.remove("hidden");
+  const r = btn.getBoundingClientRect();
+  const w = els.palettePop.offsetWidth, h = els.palettePop.offsetHeight;
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
+  let top = r.bottom + 6;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  els.palettePop.style.left = left + "px";
+  els.palettePop.style.top = top + "px";
+}
+function closePalette() {
+  els.palettePop?.classList.add("hidden");
+  paletteTarget = null;
+  paletteAnchor = null;
+}
+
 function toggleDrawer(which) {
   const el = document.getElementById(which);
   if (!el) return;
@@ -3620,14 +3664,47 @@ function wire() {
   if (els.backdrop) els.backdrop.addEventListener("click", closeDrawers);
   if (els.fields) {
     els.fields.addEventListener("click", (e) => {
+      const pb = e.target.closest(".palette-btn");
+      if (pb) {
+        e.preventDefault();
+        openPalette(pb.dataset.target, pb);
+        return;
+      }
       const sw = e.target.closest(".swatch");
       if (!sw) return;
-      const input = document.getElementById(sw.dataset.target);
-      if (!input) return;
-      input.value = sw.dataset.color;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+      applyColorTo(sw.dataset.target, sw.dataset.color);
     });
   }
+  if (els.palettePop) {
+    els.palettePop.addEventListener("click", (e) => {
+      if (e.target.closest(".p-add")) {
+        if (els.paletteNewColor) {
+          els.paletteNewColor.value = "#ffffff";
+          els.paletteNewColor.click();
+        }
+        return;
+      }
+      const sw = e.target.closest(".p-swatch");
+      if (!sw) return;
+      applyColorTo(paletteTarget, sw.dataset.color);
+      closePalette();
+    });
+  }
+  if (els.paletteNewColor) {
+    els.paletteNewColor.addEventListener("input", () => {
+      const color = els.paletteNewColor.value;
+      if (!state.palette) state.palette = [];
+      if (!state.palette.includes(color)) state.palette.push(color);
+      schedulePersist();
+      applyColorTo(paletteTarget, color);
+      if (paletteAnchor) openPalette(paletteTarget, paletteAnchor);
+    });
+  }
+  document.addEventListener("click", (e) => {
+    if (!els.palettePop || els.palettePop.classList.contains("hidden")) return;
+    if (e.target.closest("#palettePop") || e.target.closest(".palette-btn")) return;
+    closePalette();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!els.urlModal.classList.contains("hidden")) closeUrlModal();
@@ -3963,6 +4040,7 @@ async function boot() {
       selectedId = null;
       if (!state.settings.style) state.settings.style = defaultStyle(24);
       if (!state.styles) state.styles = [];
+      if (!state.palette) state.palette = [];
       els.projectName.value = state.name || "";
       renderGlobalFields();
       await renderActive();
@@ -3972,6 +4050,7 @@ async function boot() {
     } else {
       if (!state.settings.style) state.settings.style = defaultStyle(24);
       if (!state.styles) state.styles = [];
+      if (!state.palette) state.palette = [];
       initTransUI();
       renderGlobalFields();
       renderActive();

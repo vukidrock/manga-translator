@@ -15,6 +15,7 @@ export function createState() {
     glossary: [],
     tm: [],
     styles: [],
+    palette: [],
     settings: { ocrLang: "jpn", ocrMode: "region", threshold: 0.4, transDir: "en-vi", transProvider: "gemini", geminiModel: "gemini-3.1-flash-lite", geminiLimits: { rpm: 15, tpm: 250000, rpd: 500 }, useTM: true, webgpu: true, style: defaultStyle(24) },
     display: { scale: 1, fit: true, showBoxes: true, compare: true, filter: null },
   };
@@ -72,7 +73,7 @@ export async function persist(state) {
           regions: page.regions,
         });
       }
-      meta.put({ name: state.name || "", order: state.pages.map((p) => p.id), activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], styles: state.styles || [] }, "state");
+      meta.put({ name: state.name || "", order: state.pages.map((p) => p.id), activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], styles: state.styles || [], palette: state.palette || [] }, "state");
     };
     t.oncomplete = () => resolve();
     t.onerror = () => reject(t.error);
@@ -104,6 +105,7 @@ export async function restore() {
   state.glossary = meta?.glossary || [];
   state.tm = meta?.tm || [];
   state.styles = meta?.styles || [];
+  state.palette = meta?.palette || [];
   if (meta?.settings) Object.assign(state.settings, meta.settings);
   return state;
 }
@@ -165,7 +167,7 @@ export async function exportProject(state) {
   }
   zip.file(
     "project.json",
-    JSON.stringify({ version: 1, app: "manga-translator", name: state.name || "", activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], styles: state.styles || [], pages }, null, 2),
+    JSON.stringify({ version: 1, app: "manga-translator", name: state.name || "", activeId: state.activeId, settings: state.settings, glossary: state.glossary || [], tm: state.tm || [], styles: state.styles || [], palette: state.palette || [], pages }, null, 2),
   );
   return zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
 }
@@ -180,6 +182,7 @@ export async function importProject(file) {
   state.glossary = data.glossary || [];
   state.tm = data.tm || [];
   state.styles = data.styles || [];
+  state.palette = data.palette || [];
   Object.assign(state.settings, data.settings || {});
   for (const p of data.pages || []) {
     const imgEntry = zip.file(p.imageFile);
