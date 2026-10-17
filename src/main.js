@@ -1876,6 +1876,10 @@ function renderFields() {
       <div>
         <label>Màu</label>
         <input type="color" id="fldColor" value="${r.style.color}" ${dis}/>
+        <div class="swatches">
+          <button type="button" class="swatch" style="--sw:#111111" data-target="fldColor" data-color="#111111" title="Đen"></button>
+          <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldColor" data-color="#ffffff" title="Trắng"></button>
+        </div>
       </div>
     </div>
 
@@ -1927,6 +1931,10 @@ function renderFields() {
       </label>
       <input type="color" id="fldOutlineColor" value="${r.style.outlineColor}"/>
       <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
+      <span class="swatches swatches-inline">
+        <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldOutlineColor" data-color="#ffffff" title="Trắng"></button>
+        <button type="button" class="swatch" style="--sw:#111111" data-target="fldOutlineColor" data-color="#111111" title="Đen"></button>
+      </span>
     </div>
 
     <details class="adv-fields">
@@ -1958,6 +1966,10 @@ function renderFields() {
       <div>
         <label>Màu nền</label>
         <input type="color" id="fldFillColor" value="${r.style.fillColor}"/>
+        <div class="swatches">
+          <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldFillColor" data-color="#ffffff" title="Trắng"></button>
+          <button type="button" class="swatch" style="--sw:#111111" data-target="fldFillColor" data-color="#111111" title="Đen"></button>
+        </div>
       </div>
       <div>
         <label title="Chỉ dùng cho 'Cả bong bóng': chừa lại bao nhiêu px để giữ viền/nét">Lề viền</label>
@@ -3606,6 +3618,16 @@ function wire() {
   if (els.btnTogglePages) els.btnTogglePages.addEventListener("click", () => toggleDrawer("pages"));
   if (els.btnToggleInspector) els.btnToggleInspector.addEventListener("click", () => toggleDrawer("inspector"));
   if (els.backdrop) els.backdrop.addEventListener("click", closeDrawers);
+  if (els.fields) {
+    els.fields.addEventListener("click", (e) => {
+      const sw = e.target.closest(".swatch");
+      if (!sw) return;
+      const input = document.getElementById(sw.dataset.target);
+      if (!input) return;
+      input.value = sw.dataset.color;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (!els.urlModal.classList.contains("hidden")) closeUrlModal();
