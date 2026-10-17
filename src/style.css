@@ -720,3 +720,16 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   .center-bar.pos-top .cb-sep, .center-bar.pos-bottom .cb-sep { width: 1px; height: 24px; }
   .center-bar.pos-top .cb-box, .center-bar.pos-bottom .cb-box { flex-direction: row; gap: 4px; white-space: nowrap; }
 }
+
+/* Layout ngang (trên/dưới & mobile): nhóm nằm ngang, nút gọn lại */
+@media (max-width: 860px) {
+  .cb-panel { gap: 5px; }
+  .cb-panel button { width: 30px; height: 30px; }
+  .cb-panel .cb-group { flex-direction: row; }
+}
+@media (min-width: 861px) {
+  .center-bar.pos-top .cb-panel, .center-bar.pos-bottom .cb-panel { padding: 5px 7px; gap: 5px; }
+  .center-bar.pos-top .cb-panel button, .center-bar.pos-bottom .cb-panel button { width: 30px; height: 30px; }
+  .center-bar.pos-top .cb-panel .tools-collapse, .center-bar.pos-bottom .cb-panel .tools-collapse { width: 26px; height: 22px; }
+  .center-bar.pos-top .cb-group, .center-bar.pos-bottom .cb-group { flex-direction: row; }
+}
