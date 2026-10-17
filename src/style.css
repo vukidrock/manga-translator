@@ -664,3 +664,38 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 }
 .p-add:hover { border-color: var(--accent); color: var(--text); }
 .p-add-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; border: none; cursor: pointer; }
+
+/* --- a11y: focus ring cho phần tử tự chế --- */
+.toolbar button:focus-visible, .center-bar button:focus-visible, .palette-btn:focus-visible,
+.swatch:focus-visible, .p-swatch:focus-visible, .p-add:focus-visible, .p-del:focus-visible,
+.filterbar .legend-item:focus-visible, .preset-chip:focus-visible, .region-item:focus-visible,
+.page-thumb:focus-visible, .aside-title:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* --- tăng kích thước chạm >= 26px --- */
+.swatch, .color-custom, .palette-btn, .p-swatch, .p-add { width: 26px; height: 26px; }
+.palette-pop { grid-template-columns: repeat(6, 26px); gap: 8px; }
+.p-wrap { position: relative; width: 26px; height: 26px; }
+.p-empty { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+.p-del {
+  position: absolute; top: -6px; right: -6px; width: 15px; height: 15px;
+  border-radius: 50%; border: 1px solid var(--panel); background: var(--danger); color: #fff;
+  font-size: 10px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  padding: 0; cursor: pointer; z-index: 1;
+}
+.p-del:hover { filter: brightness(1.1); }
+
+/* --- mobile: bảng tool thành thanh ngang sát đáy (không che giữa ảnh) --- */
+@media (max-width: 860px) {
+  .center-bar {
+    top: auto; bottom: 10px; left: 50%; transform: translateX(-50%);
+    max-width: calc(100% - 16px);
+  }
+  .cb-panel {
+    flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+    max-height: none; max-width: 100%; padding: 6px 8px;
+  }
+  .cb-panel .cb-sep { width: 1px; height: 24px; }
+  .cb-panel .cb-box { flex-direction: row; gap: 4px; white-space: nowrap; }
+}

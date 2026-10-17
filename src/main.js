@@ -3571,7 +3571,8 @@ function openPalette(targetId, btn) {
   paletteAnchor = btn;
   const colors = state.palette || [];
   els.palettePop.innerHTML =
-    colors.map((c) => `<button type="button" class="p-swatch" data-color="${c}" style="--sw:${c}" title="${c}"></button>`).join("") +
+    (colors.length ? "" : `<span class="p-empty">Chưa có màu — bấm ＋</span>`) +
+    colors.map((c) => `<span class="p-wrap"><button type="button" class="p-swatch" data-color="${c}" style="--sw:${c}" title="Áp màu ${c}"></button><button type="button" class="p-del" data-del="${c}" title="Xoá màu khỏi palette">×</button></span>`).join("") +
     `<label class="p-add" title="Thêm màu">＋<input type="color" class="p-add-input" value="#ffffff"/></label>`;
   els.palettePop.classList.remove("hidden");
   const r = btn.getBoundingClientRect();
@@ -3676,6 +3677,14 @@ function wire() {
   }
   if (els.palettePop) {
     els.palettePop.addEventListener("click", (e) => {
+      const del = e.target.closest(".p-del");
+      if (del) {
+        e.preventDefault();
+        state.palette = (state.palette || []).filter((c) => c !== del.dataset.del);
+        schedulePersist();
+        if (paletteAnchor) openPalette(paletteTarget, paletteAnchor);
+        return;
+      }
       const sw = e.target.closest(".p-swatch");
       if (!sw) return;
       applyColorTo(paletteTarget, sw.dataset.color);
