@@ -16,7 +16,7 @@ export function createState() {
     tm: [],
     styles: [],
     palette: [],
-    settings: { ocrLang: "jpn", ocrMode: "region", threshold: 0.4, transDir: "en-vi", transProvider: "gemini", geminiModel: "gemini-3.1-flash-lite", geminiLimits: { rpm: 15, tpm: 250000, rpd: 500 }, useTM: true, webgpu: true, style: defaultStyle(24) },
+    settings: { ocrLang: "jpn", ocrMode: "region", threshold: 0.4, transDir: "en-vi", transProvider: "gemini", geminiModel: "gemini-3.1-flash-lite", geminiLimits: { rpm: 15, tpm: 250000, rpd: 500 }, useTM: true, webgpu: true, toolsPos: "center", style: defaultStyle(24) },
     display: { scale: 1, fit: true, showBoxes: true, compare: true, filter: null },
   };
 }

@@ -117,6 +117,16 @@
     <div class="menu-inline" id="geminiCountdown" style="display:none;color:var(--danger)"></div>
     <div class="menu-sep"></div>
     <div class="menu-group-label"><i data-lucide="palette"></i>Giao diện</div>
+    <label class="menu-inline" title="Vị trí thanh công cụ giữa các khung">
+      <span>Vị trí thanh công cụ</span>
+      <select id="toolsPos">
+        <option value="center">Giữa 2 khung</option>
+        <option value="top">Trên</option>
+        <option value="bottom">Dưới</option>
+        <option value="left">Trái</option>
+        <option value="right">Phải</option>
+      </select>
+    </label>
     <button id="btnTheme">Nền tối</button>
     <button id="btnHelp"><i data-lucide="circle-help"></i>Hướng dẫn sử dụng</button>
     <details class="menu-details">
@@ -156,6 +166,7 @@
         </div>
         <div class="center-bar" id="centerBar">
           <div class="cb-panel">
+            <button id="btnToolsCollapse" class="tools-collapse" title="Thu gọn / mở rộng thanh công cụ"><i data-lucide="chevrons-up"></i></button>
             <button id="btnAuto" class="primary" title="Tự động TRANG ĐANG XEM: Nhận diện → Dịch → Xoá chữ"><i data-lucide="zap"></i>Tự động trang</button>
             <button id="btnAutoAll" title="Tự động TOÀN BỘ danh sách trang (hàng đợi)"><i data-lucide="layers"></i>Tự động cả bộ</button>
             <span class="cb-sep"></span>

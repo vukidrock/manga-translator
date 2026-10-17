@@ -81,6 +81,8 @@ const els = {
   keyStatus: $("keyStatus"),
   keySave: $("keySave"),
   keyCancel: $("keyCancel"),
+  toolsPos: $("toolsPos"),
+  btnToolsCollapse: $("btnToolsCollapse"),
   geminiModel: $("geminiModel"),
   geminiKeyRow: $("geminiKeyRow"),
   geminiModelRow: $("geminiModelRow"),
@@ -660,6 +662,14 @@ function opUI() {
 // Áp lựa chọn engine (WebGPU) cho onnxruntime-web.
 function applyEnginePref() {
   globalThis.__mtUseWebGPU = state.settings.webgpu !== false;
+}
+function applyToolsPos() {
+  const bar = document.getElementById("centerBar");
+  if (!bar) return;
+  ["center", "top", "bottom", "left", "right"].forEach((p) => bar.classList.remove("pos-" + p));
+  const pos = state.settings.toolsPos || "center";
+  bar.classList.add("pos-" + pos);
+  if (els.toolsPos) els.toolsPos.value = pos;
 }
 function resetOrtSessions() {
   try { clearDetector(); } catch { /* ignore */ }
@@ -3490,6 +3500,7 @@ function newProject() {
   els.webgpuToggle.checked = state.settings.webgpu !== false;
   els.showBoxes.checked = state.display.showBoxes !== false;
   applyCompareUI();
+  applyToolsPos();
   initTransUI();
   renderGlobalFields();
   renderPages();
@@ -3530,12 +3541,13 @@ async function loadProjectFile(file) {
     selectedId = null;
     if (!state.settings.style) state.settings.style = defaultStyle(24);
     if (!state.styles) state.styles = [];
-      if (!state.palette) state.palette = [];
+    if (!state.palette) state.palette = [];
     els.projectName.value = state.name || "";
     renderGlobalFields();
     await renderActive();
     renderPages();
     applyCompareUI();
+    applyToolsPos();
     if (state.display.compare) renderResult();
     await persist(state);
     projectDirty = false;
@@ -3662,6 +3674,15 @@ function wire() {
   if (els.btnTogglePages) els.btnTogglePages.addEventListener("click", () => toggleDrawer("pages"));
   if (els.btnToggleInspector) els.btnToggleInspector.addEventListener("click", () => toggleDrawer("inspector"));
   if (els.backdrop) els.backdrop.addEventListener("click", closeDrawers);
+  if (els.toolsPos) els.toolsPos.addEventListener("change", () => {
+    state.settings.toolsPos = els.toolsPos.value;
+    applyToolsPos();
+    persistSoon();
+  });
+  if (els.btnToolsCollapse) els.btnToolsCollapse.addEventListener("click", () => {
+    const panel = document.querySelector(".cb-panel");
+    if (panel) panel.classList.toggle("collapsed");
+  });
   if (els.fields) {
     els.fields.addEventListener("click", (e) => {
       const pb = e.target.closest(".palette-btn");
@@ -4060,6 +4081,7 @@ async function boot() {
     }
     els.webgpuToggle.checked = state.settings.webgpu !== false;
     applyEnginePref();
+    applyToolsPos();
     resetHistory();
     refreshIcons();
   } finally {
