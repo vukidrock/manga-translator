@@ -76,7 +76,6 @@ const els = {
   backdrop: $("backdrop"),
   resultEmpty: $("resultEmpty"),
   palettePop: $("palettePop"),
-  paletteNewColor: $("paletteNewColor"),
   keyModal: $("keyModal"),
   keyInput: $("keyInput"),
   keyStatus: $("keyStatus"),
@@ -3573,7 +3572,7 @@ function openPalette(targetId, btn) {
   const colors = state.palette || [];
   els.palettePop.innerHTML =
     colors.map((c) => `<button type="button" class="p-swatch" data-color="${c}" style="--sw:${c}" title="${c}"></button>`).join("") +
-    `<button type="button" class="p-add" title="Thêm màu">＋</button>`;
+    `<label class="p-add" title="Thêm màu">＋<input type="color" class="p-add-input" value="#ffffff"/></label>`;
   els.palettePop.classList.remove("hidden");
   const r = btn.getBoundingClientRect();
   const w = els.palettePop.offsetWidth, h = els.palettePop.offsetHeight;
@@ -3677,22 +3676,15 @@ function wire() {
   }
   if (els.palettePop) {
     els.palettePop.addEventListener("click", (e) => {
-      if (e.target.closest(".p-add")) {
-        if (els.paletteNewColor) {
-          els.paletteNewColor.value = "#ffffff";
-          els.paletteNewColor.click();
-        }
-        return;
-      }
       const sw = e.target.closest(".p-swatch");
       if (!sw) return;
       applyColorTo(paletteTarget, sw.dataset.color);
       closePalette();
     });
-  }
-  if (els.paletteNewColor) {
-    els.paletteNewColor.addEventListener("input", () => {
-      const color = els.paletteNewColor.value;
+    els.palettePop.addEventListener("change", (e) => {
+      const inp = e.target.closest(".p-add-input");
+      if (!inp) return;
+      const color = inp.value;
       if (!state.palette) state.palette = [];
       if (!state.palette.includes(color)) state.palette.push(color);
       schedulePersist();
