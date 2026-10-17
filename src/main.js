@@ -1875,10 +1875,10 @@ function renderFields() {
       </div>
       <div>
         <label>Màu</label>
-        <input type="color" id="fldColor" value="${r.style.color}" ${dis}/>
-        <div class="swatches">
+        <div class="color-row">
           <button type="button" class="swatch" style="--sw:#111111" data-target="fldColor" data-color="#111111" title="Đen"></button>
           <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldColor" data-color="#ffffff" title="Trắng"></button>
+          <label class="color-custom" title="Màu tuỳ ý"><input type="color" id="fldColor" value="${r.style.color}" ${dis}/></label>
         </div>
       </div>
     </div>
@@ -1929,12 +1929,12 @@ function renderFields() {
       <label class="inline" style="text-transform:none;color:var(--text)">
         <input type="checkbox" id="fldOutline" ${r.style.outline ? "checked" : ""}/> Viền chữ
       </label>
-      <input type="color" id="fldOutlineColor" value="${r.style.outlineColor}"/>
-      <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
-      <span class="swatches swatches-inline">
+      <span class="color-row">
         <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldOutlineColor" data-color="#ffffff" title="Trắng"></button>
         <button type="button" class="swatch" style="--sw:#111111" data-target="fldOutlineColor" data-color="#111111" title="Đen"></button>
+        <label class="color-custom" title="Màu viền tuỳ ý"><input type="color" id="fldOutlineColor" value="${r.style.outlineColor}"/></label>
       </span>
+      <input type="number" id="fldOutlineWidth" min="0" max="10" value="${r.style.outlineWidth || 2}" style="max-width:64px"/>
     </div>
 
     <details class="adv-fields">
@@ -1965,10 +1965,10 @@ function renderFields() {
     <div class="grid3">
       <div>
         <label>Màu nền</label>
-        <input type="color" id="fldFillColor" value="${r.style.fillColor}"/>
-        <div class="swatches">
+        <div class="color-row">
           <button type="button" class="swatch" style="--sw:#ffffff" data-target="fldFillColor" data-color="#ffffff" title="Trắng"></button>
           <button type="button" class="swatch" style="--sw:#111111" data-target="fldFillColor" data-color="#111111" title="Đen"></button>
+          <label class="color-custom" title="Màu nền tuỳ ý"><input type="color" id="fldFillColor" value="${r.style.fillColor}"/></label>
         </div>
       </div>
       <div>
