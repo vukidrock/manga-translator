@@ -180,9 +180,30 @@ export function pathShape(ctx, s) {
   }
 }
 
+function iou(a, b) {
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.w, b.x + b.w);
+  const y2 = Math.min(a.y + a.h, b.y + b.h);
+  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  const uni = a.w * a.h + b.w * b.h - inter;
+  return uni > 0 ? inter / uni : 0;
+}
+
+// Loại box trùng cho cùng 1 đối tượng (model đôi khi trả 2 box chồng nhau).
+function nms(dets, thr = 0.6) {
+  const sorted = [...dets].sort((a, b) => (b.score || 0) - (a.score || 0));
+  const keep = [];
+  for (const d of sorted) {
+    if (keep.some((k) => iou(k, d) > thr)) continue;
+    keep.push(d);
+  }
+  return keep;
+}
+
 export function buildRegions(dets) {
-  const bubbles = dets.filter((d) => d.cls === "bubble").sort((a, b) => area(a) - area(b));
-  const texts = dets.filter((d) => d.cls === "text_bubble" || d.cls === "text_free");
+  const bubbles = nms(dets.filter((d) => d.cls === "bubble"), 0.6).sort((a, b) => area(a) - area(b));
+  const texts = nms(dets.filter((d) => d.cls === "text_bubble" || d.cls === "text_free"), 0.6);
   const used = new Set();
   const regions = [];
 
@@ -203,8 +224,14 @@ export function buildRegions(dets) {
     regions.push(region);
   }
 
-  regions.sort((a, b) => a.y - b.y || a.x - b.x);
-  return regions;
+  // Chốt chặn: 2 vùng gần như trùng hệt (IoU > 0.85) thì bỏ cái sau.
+  const deduped = [];
+  for (const r of regions) {
+    if (deduped.some((k) => iou(k, r) > 0.85)) continue;
+    deduped.push(r);
+  }
+  deduped.sort((a, b) => a.y - b.y || a.x - b.x);
+  return deduped;
 }
 
 const CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]/;
