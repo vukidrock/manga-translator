@@ -57,6 +57,7 @@
     </div>
 
     <div class="group right">
+      <button id="btnHelp" title="Hướng dẫn sử dụng"><i data-lucide="circle-help"></i></button>
       <button id="btnMenu" class="menu-btn" title="Thêm tuỳ chọn"><i data-lucide="ellipsis"></i></button>
     </div>
 
@@ -128,7 +129,6 @@
       </select>
     </label>
     <button id="btnTheme">Nền tối</button>
-    <button id="btnHelp"><i data-lucide="circle-help"></i>Hướng dẫn sử dụng</button>
     <details class="menu-details">
       <summary>Phím tắt</summary>
       <div class="menu-hint"><b>⌘/Ctrl + Z</b> — Hoàn tác<br /><b>⌘/Ctrl + ⇧ + Z</b> — Làm lại<br /><b>K</b> (Alt+K khi đang gõ) — Giữ nguyên vùng đang chọn<br /><b>Delete / Backspace</b> — Xoá vùng đang chọn<br /><b>Double-click vùng</b> — Zoom sát vùng<br /><b>Giữ Shift khi xoay</b> — Bắt góc 15°</div>
@@ -333,20 +333,20 @@
     <div class="modal-box">
       <div class="modal-title">Hướng dẫn nhanh</div>
       <div class="help-body">
-        <p class="muted">Quy trình cơ bản (làm theo thứ tự):</p>
+        <p class="muted">Bấm nút <span class="hb"><i data-lucide="circle-help"></i><b>?</b></span> ở góc phải trên để mở lại hướng dẫn này. Quy trình cơ bản:</p>
         <ol class="steps">
-          <li><b>+ Ảnh</b> / <b>+ URL</b> — thêm trang truyện.</li>
-          <li><b>Nhận diện</b> — tìm bong bóng &amp; ô chữ (hoặc bấm <b>Tự động</b> để chạy cả chuỗi).</li>
-          <li><b>Dịch</b> — nên dùng <b>Gemini</b> (đọc chữ từ ảnh + dịch theo ngữ cảnh, <b>không cần OCR</b>). Chọn <b>Offline</b> thì phải <b>OCR</b> trước; OCR cơ bản chỉ hợp chữ sạch/đánh máy.</li>
-          <li><b>Dịch</b> — điền bản dịch; sửa lại ở bảng bên phải.</li>
-          <li><b>Xoá chữ AI</b> hoặc <b>Cọ tẩy</b> — dọn chữ gốc, tái tạo nền.</li>
-          <li><b>ZIP</b> — xuất ảnh đã dịch.</li>
+          <li><span class="hb"><i data-lucide="image-plus"></i><b>Ảnh</b></span> / <span class="hb"><i data-lucide="link"></i><b>URL</b></span> — thêm trang truyện (kéo-thả cũng được).</li>
+          <li><span class="hb"><i data-lucide="scan-search"></i><b>Nhận diện</b></span> — tìm bong bóng &amp; ô chữ. Hoặc <span class="hb"><i data-lucide="zap"></i><b>Tự động</b></span> (1 trang) / <span class="hb"><i data-lucide="layers"></i><b>Tự động cả bộ</b></span> (toàn bộ).</li>
+          <li><span class="hb"><i data-lucide="languages"></i><b>Dịch</b></span> — nên dùng <b>Gemini</b> (đọc chữ từ ảnh, không cần OCR). Nếu chọn <b>Offline</b> thì bấm <span class="hb"><i data-lucide="scan-text"></i><b>OCR</b></span> trước (OCR cơ bản, hợp chữ sạch).</li>
+          <li>Thiếu key? Bấm <span class="hb"><i data-lucide="key-round"></i><b>Nhập Gemini key</b></span> trên thanh trên.</li>
+          <li>Sửa bản dịch ở bảng phải; áp nhanh bằng <span class="hb"><i data-lucide="palette"></i><b>Kiểu chữ nhanh</b></span>; chỉnh font/màu/viền, ký tự trước–sau.</li>
+          <li><span class="hb"><i data-lucide="wand-sparkles"></i><b>Xoá chữ AI</b></span> hoặc <span class="hb"><i data-lucide="brush"></i><b>Cọ tẩy</b></span> — dọn chữ gốc, tái tạo nền. <span class="hb"><i data-lucide="rotate-ccw"></i><b>↺</b></span> để hoàn tác xoá.</li>
+          <li><span class="hb"><i data-lucide="file-archive"></i><b>Xuất ZIP (cả bộ)</b></span> trong menu <span class="hb"><i data-lucide="ellipsis"></i><b>⋯</b></span> — xuất ảnh đã dịch.</li>
         </ol>
-        <p class="muted"><b>Tự động</b> = làm bước 2→5 cho <b>trang hiện tại</b> một lần.</p>
         <p class="muted">
-          Mẹo: bật <b>Đối chiếu</b> để xem gốc | dịch cạnh nhau; <b>double-click</b> một khung để zoom;
-          <b>kéo/xoay/đa giác</b> để khớp chữ; <b>K</b> để giữ nguyên vùng; <b>Ctrl/Cmd+Z</b> để hoàn tác.
-          Thêm <b>Bảng thuật ngữ</b> (menu ⋯) để dịch tên riêng nhất quán.
+          Mẹo: bật <b>Đối chiếu</b> để xem gốc | dịch cạnh nhau; <b>double-click</b> khung để zoom;
+          <b>kéo/xoay/đa giác</b> để khớp chữ; <b>K</b> giữ nguyên vùng; <b>Ctrl/Cmd+Z</b> hoàn tác.
+          Bảng thuật ngữ &amp; Bộ nhớ dịch ở menu <span class="hb"><i data-lucide="ellipsis"></i><b>⋯</b></span>.
         </p>
       </div>
       <div class="modal-actions"><button id="helpClose" class="primary">Đã hiểu</button></div>

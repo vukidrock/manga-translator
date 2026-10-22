@@ -733,3 +733,8 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
   .center-bar.pos-top .cb-panel .tools-collapse, .center-bar.pos-bottom .cb-panel .tools-collapse { width: 26px; height: 22px; }
   .center-bar.pos-top .cb-group, .center-bar.pos-bottom .cb-group { flex-direction: row; }
 }
+
+/* Hướng dẫn: icon nút inline */
+.help-body .hb { display: inline-flex; align-items: center; gap: 3px; color: var(--text); font-weight: 600; }
+.help-body .hb svg { width: 15px; height: 15px; margin: 0; }
+.toolbar #btnHelp svg { margin-right: 0; }
