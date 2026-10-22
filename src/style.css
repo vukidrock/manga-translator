@@ -750,3 +750,13 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .help-body .hb { display: inline; white-space: nowrap; font-weight: 600; color: var(--text); }
 .help-body .hb svg { width: 15px; height: 15px; vertical-align: -3px; margin-right: 3px; }
 .help-body .steps { line-height: 1.75; }
+
+/* Icon/nút trong hướng dẫn: bọc viền như nút thật để dễ nhận biết */
+.help-body .hb {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--panel-2); color: var(--text); font-weight: 600;
+  vertical-align: middle; white-space: nowrap; line-height: 1.4;
+}
+.help-body .hb svg { width: 15px; height: 15px; margin: 0; }
+.help-body .steps li { line-height: 1.9; }
