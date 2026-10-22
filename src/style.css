@@ -738,3 +738,15 @@ aside.inspector { border-right: none; border-left: 1px solid var(--line); }
 .help-body .hb { display: inline-flex; align-items: center; gap: 3px; color: var(--text); font-weight: 600; }
 .help-body .hb svg { width: 15px; height: 15px; margin: 0; }
 .toolbar #btnHelp svg { margin-right: 0; }
+
+/* Nút icon góc phải (? và ⋯) đồng bộ kiểu toolbar macOS */
+.toolbar .group.right button {
+  width: 38px; height: 32px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.toolbar .group.right button svg { width: 17px; height: 17px; margin: 0; }
+
+/* Hướng dẫn: icon inline thẳng hàng với chữ (không dùng inline-flex gây lệch baseline) */
+.help-body .hb { display: inline; white-space: nowrap; font-weight: 600; color: var(--text); }
+.help-body .hb svg { width: 15px; height: 15px; vertical-align: -3px; margin-right: 3px; }
+.help-body .steps { line-height: 1.75; }
